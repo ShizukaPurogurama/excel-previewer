@@ -908,6 +908,11 @@
         return Boolean(rowFlags[index]);
       });
     });
+    const selectedAnchorRecords = parsed.mergedAnchors.map(function (anchorRow) {
+      return selectedColumnIndexes.map(function (index) {
+        return anchorRow[index];
+      });
+    });
 
     syncColumnPicker(parsed.headers, selectedColumnIndexes);
 
@@ -935,16 +940,24 @@
       selectedRecords.forEach(function (record, recordIndex) {
         const tr = document.createElement("tr");
         const mergedFlags = selectedMergedRecords[recordIndex] || [];
+        const anchorFlags = selectedAnchorRecords[recordIndex] || [];
 
         record.forEach(function (value, cellIndex) {
+          if (mergedFlags[cellIndex] && !anchorFlags[cellIndex]) {
+            return; // Skip rendering carried cells, rely on anchor's rowSpan
+          }
+
           const td = createTextCell("td", value || "-");
           if (!value) {
             td.classList.add("cell-empty");
           }
 
-          if (mergedFlags[cellIndex]) {
-            td.classList.add("cell-merged");
-            td.title = "Merged cell";
+          const anchor = anchorFlags[cellIndex];
+          if (anchor) {
+            if (anchor.rowSpan > 1) {
+              td.rowSpan = anchor.rowSpan;
+            }
+            td.classList.add("cell-merged-anchor");
           }
 
           tr.append(td);
@@ -1022,11 +1035,22 @@
           return isMergedCarryCell(state.currentSheetName, sourceRowIndex, columnIndex);
         })
       );
+      
+      acc.mergedAnchors.push(
+        activeColumns.map(function (columnIndex) {
+          return getMergeAnchorCell(state.currentSheetName, sourceRowIndex, columnIndex);
+        })
+      );
 
       return acc;
-    }, { records: [], mergedCarryRows: [] });
+    }, { records: [], mergedCarryRows: [], mergedAnchors: [] });
 
-    return { headers: headers, records: rowsWithMeta.records, mergedCarryRows: rowsWithMeta.mergedCarryRows };
+    return { 
+      headers: headers, 
+      records: rowsWithMeta.records, 
+      mergedCarryRows: rowsWithMeta.mergedCarryRows,
+      mergedAnchors: rowsWithMeta.mergedAnchors
+    };
   }
 
   function getSelectedColumnIndexesForCurrentSheet(totalColumns) {
@@ -1350,12 +1374,15 @@
         const columnDataText = rows.map(function(row) {
           const td = row.children[colIndex];
           if (!td) return "";
-          return td.classList.contains("cell-empty") ? "" : td.textContent.trim();
+          return td.dataset.formula || (td.classList.contains("cell-empty") ? "" : td.textContent.trim());
         });
         
         const columnDataPlain = columnDataText.join("\n");
-        const columnDataHtml = "<table>" + columnDataText.map(function(val) {
-          return "<tr><td style=\"mso-number-format:'\@'\">" + val + "</td></tr>";
+        const columnDataHtml = "<table>" + rows.map(function(row) {
+          const td = row.children[colIndex];
+          if (!td) return "<tr><td></td></tr>";
+          const inner = td.querySelector("a") ? td.innerHTML : (td.classList.contains("cell-empty") ? "" : td.textContent.trim());
+          return "<tr><td style=\"mso-number-format:'\@'\">" + inner + "</td></tr>";
         }).join("") + "</table>";
         
         copyHtmlToClipboard(columnDataPlain, columnDataHtml)
@@ -1370,8 +1397,13 @@
       }
     }
 
-    let text = cell.classList.contains("cell-empty") ? "" : cell.textContent.trim();
-    let html = "<table><tr><td style=\"mso-number-format:'\@'\">" + text + "</td></tr></table>";
+    if (event.target.closest("a")) {
+      return; // Let the link be clicked without triggering cell copy
+    }
+
+    let text = cell.dataset.formula || (cell.classList.contains("cell-empty") ? "" : cell.textContent.trim());
+    let innerContent = cell.querySelector("a") ? cell.innerHTML : (cell.classList.contains("cell-empty") ? "" : cell.textContent.trim());
+    let html = "<table><tr><td style=\"mso-number-format:'\@'\">" + innerContent + "</td></tr></table>";
 
     copyHtmlToClipboard(text, html)
       .then(function () {
@@ -1491,6 +1523,33 @@
 
   function createTextCell(tagName, text) {
     const cell = document.createElement(tagName);
+    
+    if (typeof text === 'string') {
+      const trimmedText = text.trim();
+      const hyperMatch = trimmedText.match(/^=HYPERLINK\(\s*"([^"]+)"\s*(?:,\s*"([^"]+)")?\s*\)$/i);
+      
+      if (hyperMatch) {
+        const url = hyperMatch[1];
+        const label = hyperMatch[2] || url;
+        
+        const link = document.createElement("a");
+        link.href = url;
+        link.textContent = label;
+        link.className = "cell-link";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        
+        // Prevent row selection when clicking the link
+        link.addEventListener("click", function(e) {
+          e.stopPropagation();
+        });
+        
+        cell.dataset.formula = trimmedText;
+        cell.append(link);
+        return cell;
+      }
+    }
+
     cell.textContent = text;
     return cell;
   }
