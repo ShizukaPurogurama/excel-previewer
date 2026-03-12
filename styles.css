@@ -2,68 +2,68 @@
 
 :root {
   color-scheme: light;
-  --bg: #1a1a1a;
-  --bg-alt: #2a2a2a;
-  --surface: rgba(35, 35, 35, 0.95);
-  --surface-strong: rgba(45, 45, 45, 0.98);
-  --surface-soft: rgba(40, 40, 40, 0.85);
-  --surface-elevated: rgba(50, 50, 50, 0.98);
-  --text: #ffffff;
-  --muted: #9ca3af;
-  --accent: #00d4ff;
-  --accent-strong: #0099cc;
-  --accent-soft: rgba(0, 212, 255, 0.15);
-  --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(255, 255, 255, 0.25);
-  --success: #10b981;
-  --danger: #ef4444;
-  --button-text: #000000;
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
-  --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.28);
-  --table-head: #2d3748;
-  --table-sticky: rgba(35, 35, 35, 0.98);
-  --stripe: rgba(255, 255, 255, 0.03);
-  --empty-bg: rgba(45, 45, 45, 0.8);
-  --grid-line: rgba(255, 255, 255, 0.06);
-  --glow-a: rgba(0, 212, 255, 0.3);
-  --glow-b: rgba(0, 153, 204, 0.25);
-  --scrollbar-track: rgba(255, 255, 255, 0.05);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.3);
-  --radius-xl: 24px;
-  --radius-lg: 18px;
-  --radius-md: 14px;
-  --radius-sm: 10px;
+  --bg: #fafafa;
+  --bg-alt: #f1f5f9;
+  --surface: #ffffff;
+  --surface-strong: #f4f4f5;
+  --surface-soft: rgba(255, 255, 255, 0.6);
+  --surface-elevated: #ffffff;
+  --text: #09090b;
+  --muted: #71717a;
+  --accent: #18181b;
+  --accent-strong: #000000;
+  --accent-soft: rgba(0, 0, 0, 0.05);
+  --line: #e4e4e7;
+  --line-strong: #d4d4d8;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --button-text: #ffffff;
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --table-head: #fafafa;
+  --table-sticky: #ffffff;
+  --stripe: rgba(0, 0, 0, 0.02);
+  --empty-bg: #f8fafc;
+  --grid-line: rgba(0, 0, 0, 0.04);
+  --glow-a: transparent;
+  --glow-b: transparent;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #d4d4d8;
+  --radius-xl: 12px;
+  --radius-lg: 8px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0a0a0a;
-  --bg-alt: #151515;
-  --surface: rgba(15, 15, 15, 0.95);
-  --surface-strong: rgba(20, 20, 20, 0.98);
-  --surface-soft: rgba(18, 18, 18, 0.85);
-  --surface-elevated: rgba(25, 25, 25, 0.98);
-  --text: #ffffff;
-  --muted: #9ca3af;
-  --accent: #00ffff;
-  --accent-strong: #00cccc;
-  --accent-soft: rgba(0, 255, 255, 0.15);
-  --line: rgba(255, 255, 255, 0.1);
-  --line-strong: rgba(255, 255, 255, 0.2);
+  --bg: #09090b;
+  --bg-alt: #09090b;
+  --surface: #18181b;
+  --surface-strong: #27272a;
+  --surface-soft: rgba(24, 24, 27, 0.6);
+  --surface-elevated: #27272a;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --accent: #ffffff;
+  --accent-strong: #e4e4e7;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --line: #27272a;
+  --line-strong: #3f3f46;
   --success: #10b981;
   --danger: #ef4444;
-  --button-text: #000000;
-  --shadow: 0 24px 54px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.35);
-  --table-head: #1f2937;
-  --table-sticky: rgba(15, 15, 15, 0.98);
+  --button-text: #18181b;
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --table-head: #18181b;
+  --table-sticky: #18181b;
   --stripe: rgba(255, 255, 255, 0.02);
-  --empty-bg: rgba(25, 25, 25, 0.8);
+  --empty-bg: rgba(24, 24, 27, 0.4);
   --grid-line: rgba(255, 255, 255, 0.04);
-  --glow-a: rgba(0, 255, 255, 0.25);
-  --glow-b: rgba(0, 204, 204, 0.2);
-  --scrollbar-track: rgba(255, 255, 255, 0.03);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.25);
+  --glow-a: transparent;
+  --glow-b: transparent;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #3f3f46;
 }
 
 *,
@@ -81,10 +81,7 @@ body {
   min-height: 100vh;
   font-family: "Manrope", sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 8% -8%, var(--glow-a), transparent 38%),
-    radial-gradient(circle at 92% -10%, var(--glow-b), transparent 34%),
-    linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
+  background: var(--bg);
   transition: background-color 180ms ease, color 180ms ease;
 }
 
@@ -200,8 +197,7 @@ input[type="number"]:focus-visible {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-  box-shadow: 0 0 0 6px var(--accent-soft);
+  background: var(--text);
 }
 
 .intro-grid {
@@ -217,9 +213,8 @@ input[type="number"]:focus-visible {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), var(--surface));
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(20px);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -231,9 +226,8 @@ input[type="number"]:focus-visible {
 .hero-card:hover,
 .panel:hover,
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 34px 68px rgba(0, 0, 0, 0.52);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
+  box-shadow: var(--shadow);
+  border-color: var(--line-strong);
 }
 
 .hero-card,
@@ -244,19 +238,6 @@ input[type="number"]:focus-visible {
 .hero-card {
   padding: clamp(16px, 2.5vw, 28px);
   min-height: 100%;
-}
-
-.hero-card::after,
-.panel::after {
-  content: "";
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  right: -100px;
-  bottom: -170px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
-  pointer-events: none;
 }
 
 .eyebrow,
@@ -357,8 +338,8 @@ input[type="number"]:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-  color: var(--button-text);
+  background: var(--surface-strong);
+  color: var(--text);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
 }
@@ -407,14 +388,13 @@ input[type="number"]:focus-visible {
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 72%, transparent), color-mix(in srgb, var(--surface-soft) 56%, transparent));
+  background: var(--surface-soft);
   border: 1px solid var(--line);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .field:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  border-color: var(--line-strong);
 }
 
 .field small,
@@ -447,24 +427,20 @@ input[type="number"] {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
   color: var(--text);
   padding: 12px 16px;
   outline: none;
   transition:
     border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
+    background-color 160ms ease;
 }
 
 .file-input:hover,
 select:hover,
 input[type="number"]:hover {
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
+  border-color: var(--muted);
 }
 
 .file-input:focus,
@@ -473,6 +449,11 @@ input[type="number"]:focus {
   border-color: var(--accent);
   transform: translateY(-2px);
   box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+option {
+  background-color: var(--surface-elevated);
+  color: var(--text);
 }
 
 .field-header-inline {
@@ -514,15 +495,15 @@ input[type="number"]:focus {
   width: min(1080px, calc(100vw - 24px));
   max-width: 1080px;
   border: 1px solid var(--line-strong);
-  border-radius: 18px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
   color: var(--text);
   box-shadow: var(--shadow);
   padding: 0;
 }
 
 .columns-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(2px);
 }
 
@@ -560,8 +541,8 @@ input[type="number"]:focus {
 }
 
 .ghost-button.is-active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--surface-strong);
+  border-color: var(--line-strong);
 }
 
 .dialog-note {
@@ -636,29 +617,25 @@ input[type="number"]:focus {
   justify-content: center;
   min-height: 48px;
   padding: 14px 18px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  border-radius: var(--radius-md);
+  background: var(--accent);
   color: var(--button-text);
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 16px 35px color-mix(in srgb, var(--accent) 40%, transparent);
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
     opacity 160ms ease,
-    border-color 160ms ease;
+    background-color 160ms ease;
   border: 1px solid transparent;
 }
 
 .action-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px color-mix(in srgb, var(--accent) 50%, transparent);
-  border-color: var(--accent);
+  background: var(--accent-strong);
 }
 
 .action-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+  transform: translateY(1px);
 }
 
 .floating-settings {
@@ -675,9 +652,9 @@ input[type="number"]:focus {
 .floating-settings-toggle {
   width: 44px;
   height: 44px;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
+  background: var(--surface-elevated);
   color: var(--text);
   display: grid;
   place-items: center;
@@ -685,13 +662,11 @@ input[type="number"]:focus {
   font-weight: 800;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition: background-color 140ms ease, border-color 140ms ease;
 }
 
 .floating-settings-toggle:hover {
-  transform: translateY(-1px);
-  border-color: var(--accent);
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--accent) 26%, transparent);
+  background: var(--surface-strong);
 }
 
 .floating-settings-menu {
@@ -712,22 +687,25 @@ input[type="number"]:focus {
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
+  background: var(--surface-elevated);
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition: background-color 140ms ease;
 }
 
 .floating-menu-item:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--accent);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 20%, transparent);
+  background: var(--surface-strong);
 }
 
 .floating-menu-item.is-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  background: var(--accent);
   color: var(--button-text);
+  border-color: var(--accent);
+}
+
+.floating-menu-item.is-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
 }
 
 .view-switcher {
@@ -755,10 +733,9 @@ input[type="number"]:focus {
 }
 
 .view-tab.is-active {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  background: var(--accent);
   color: var(--button-text);
   border-color: transparent;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 36%, transparent);
 }
 
 .data-panel.is-hidden {
@@ -826,9 +803,9 @@ input:disabled {
 
 .toast {
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 94%, transparent), color-mix(in srgb, var(--surface-elevated) 84%, transparent));
+  background: var(--surface-elevated);
   color: var(--text);
   box-shadow: var(--shadow-soft);
   opacity: 0;
@@ -959,14 +936,21 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--table-head) 92%, transparent), var(--table-head));
-  color: var(--accent);
+  background: var(--table-head);
+  color: var(--muted);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
   letter-spacing: 0.025em;
   font-weight: 700;
   text-transform: uppercase;
-  border-bottom: 2px solid color-mix(in srgb, var(--accent) 85%, #fff 15%);
+  border-bottom: 2px solid var(--line-strong);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+thead th:hover {
+  background: var(--surface-strong);
+  color: var(--text);
 }
 
 th,
@@ -1058,34 +1042,28 @@ tbody tr.is-selected {
   width: 100%;
   min-width: 88px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface-strong);
   color: var(--text);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--line-strong);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
   transition:
-    transform 160ms ease,
     border-color 160ms ease,
     background-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+    color 160ms ease;
 }
 
 .row-selector:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
-  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.25);
+  border-color: var(--muted);
+  background: var(--surface-soft);
 }
 
 .row-selector.is-active {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  background: var(--accent);
   color: var(--button-text);
   border-color: transparent;
-  box-shadow: 0 8px 20px rgba(0, 212, 255, 0.35);
-  transform: translateY(-1px);
 }
 
 .cell-empty {

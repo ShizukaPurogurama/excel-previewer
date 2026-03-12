@@ -2,6 +2,20 @@
   const PREVIEW_ROW_LIMIT = 24;
   const MAX_VISIBLE_COLUMNS = 7;
   const THEME_STORAGE_KEY = "excel-viewer-theme";
+  const COLUMN_STORAGE_KEY = "excel-viewer-columns";
+  
+  const PRIORITY_COLUMNS = [
+    "TestID", 
+    "Service Name", 
+    "Sender Account", 
+    "Sender Amount", 
+    "Fee", 
+    "Receiver Account", 
+    "Receiver Amount", 
+    "TID", 
+    "Status"
+  ].map(function(c) { return c.toLowerCase(); });
+
   const themeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   const FILE_PICKER_OPTIONS = {
     multiple: false,
@@ -317,8 +331,10 @@
       ? new Map(state.columnSelections)
       : new Map();
 
-    setBusy(true);
-    showStatus(options.statusMessage || "Reading workbook in your browser...", "");
+    if (!options.isAutoReload) {
+      setBusy(true);
+    }
+    showStatus(options.statusMessage || "Reading workbook in your browser...", "", options.hideToast);
 
     try {
       const data = await file.arrayBuffer();
@@ -348,14 +364,16 @@
           : workbook.SheetNames[0]
       );
       syncReloadControls(true);
-      showStatus(options.successMessage || "Loaded " + file.name + ".", "success");
+      showStatus(options.successMessage || "Loaded " + file.name + ".", "success", options.hideToast);
     } catch (error) {
       if (options.resetOnError) {
         resetViewer();
       }
       showStatus(error.message || "The workbook could not be parsed.", "error");
     } finally {
-      setBusy(false);
+      if (!options.isAutoReload) {
+        setBusy(false);
+      }
     }
   }
 
@@ -665,6 +683,8 @@
         statusMessage: "Auto-reloading workbook...",
         successMessage: "Auto-reloaded the latest version of " + file.name + ".",
         resetOnError: false,
+        hideToast: true,
+        isAutoReload: true,
       });
     } catch (error) {
       console.error("Auto reload failed:", error);
@@ -837,6 +857,7 @@
       return a - b;
     });
     state.columnSelections.set(state.currentSheetName, nextSelection);
+    saveColumnSelectionsToStorage(state.columnPickerHeaders, nextSelection);
     renderSheet(state.currentSheetName);
     showColumnsDialogNote("Applied " + nextSelection.length + " selected columns.", "success");
   }
@@ -1025,6 +1046,33 @@
       return limitedStored;
     }
 
+    // Attempt to restore from localStorage based on header signature
+    const savedFromStorage = loadColumnSelectionsFromStorage(state.columnPickerHeaders);
+    if (savedFromStorage && savedFromStorage.length) {
+      const validSaved = savedFromStorage.filter(function(index) {
+        return Number.isInteger(index) && index >= 0 && index < safeTotal;
+      }).slice(0, MAX_VISIBLE_COLUMNS);
+      
+      if (validSaved.length) {
+        state.columnSelections.set(state.currentSheetName, validSaved);
+        return validSaved;
+      }
+    }
+
+    // Fallback to priority columns
+    const priorityIndexes = [];
+    state.columnPickerHeaders.forEach(function(header, index) {
+      if (PRIORITY_COLUMNS.includes(header.toLowerCase())) {
+        priorityIndexes.push(index);
+      }
+    });
+
+    if (priorityIndexes.length) {
+      const limitedPriority = priorityIndexes.slice(0, MAX_VISIBLE_COLUMNS);
+      state.columnSelections.set(state.currentSheetName, limitedPriority);
+      return limitedPriority;
+    }
+
     const defaults = Array.from(
       { length: Math.min(MAX_VISIBLE_COLUMNS, safeTotal) },
       function (_, index) {
@@ -1033,6 +1081,48 @@
     );
     state.columnSelections.set(state.currentSheetName, defaults);
     return defaults;
+  }
+
+  function getHeaderSignature(headers) {
+    if (!headers || !headers.length) return "";
+    return headers.join("|");
+  }
+
+  function loadColumnSelectionsFromStorage(headers) {
+    try {
+      const sig = getHeaderSignature(headers);
+      if (!sig) return null;
+      
+      const raw = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+      if (!raw) return null;
+      
+      const data = JSON.parse(raw);
+      return data[sig] || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveColumnSelectionsToStorage(headers, selectedIndexes) {
+    try {
+      const sig = getHeaderSignature(headers);
+      if (!sig) return;
+      
+      const raw = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+      const data = raw ? JSON.parse(raw) : {};
+      
+      data[sig] = Array.from(selectedIndexes);
+      
+      // Prevent unbounded growth by keeping only the last 50 signatures
+      const keys = Object.keys(data);
+      if (keys.length > 50) {
+        delete data[keys[0]];
+      }
+      
+      window.localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      // Ignore if localStorage is unavailable
+    }
   }
 
   function syncColumnPicker(headers, selectedIndexes) {
@@ -1095,6 +1185,7 @@
 
     const defaults = optionValues.slice(0, MAX_VISIBLE_COLUMNS);
     state.columnSelections.set(state.currentSheetName, defaults);
+    saveColumnSelectionsToStorage(state.columnPickerHeaders, defaults);
     renderSheet(state.currentSheetName);
     showColumnsDialogNote("Reset to first " + defaults.length + " columns.", "success");
   }
@@ -1249,9 +1340,40 @@
       return;
     }
 
-    const text = cell.classList.contains("cell-empty") ? "" : cell.textContent.trim();
+    if (cell.tagName === "TH" && cell.closest("thead")) {
+      const table = cell.closest("table");
+      const ths = Array.from(cell.parentElement.children);
+      const colIndex = ths.indexOf(cell);
+      
+      if (colIndex !== -1) {
+        const rows = Array.from(table.querySelectorAll("tbody tr"));
+        const columnDataText = rows.map(function(row) {
+          const td = row.children[colIndex];
+          if (!td) return "";
+          return td.classList.contains("cell-empty") ? "" : td.textContent.trim();
+        });
+        
+        const columnDataPlain = columnDataText.join("\n");
+        const columnDataHtml = "<table>" + columnDataText.map(function(val) {
+          return "<tr><td style=\"mso-number-format:'\@'\">" + val + "</td></tr>";
+        }).join("") + "</table>";
+        
+        copyHtmlToClipboard(columnDataPlain, columnDataHtml)
+          .then(function () {
+            flashCopiedCell(cell);
+            showStatus('Copied entire column', "success");
+          })
+          .catch(function () {
+            showStatus("Copy failed. Please copy manually.", "error");
+          });
+        return;
+      }
+    }
 
-    copyTextToClipboard(text)
+    let text = cell.classList.contains("cell-empty") ? "" : cell.textContent.trim();
+    let html = "<table><tr><td style=\"mso-number-format:'\@'\">" + text + "</td></tr></table>";
+
+    copyHtmlToClipboard(text, html)
       .then(function () {
         flashCopiedCell(cell);
         const preview = text ? text.slice(0, 42) + (text.length > 42 ? "..." : "") : "(empty)";
@@ -1262,15 +1384,29 @@
       });
   }
 
-  function copyTextToClipboard(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      return navigator.clipboard.writeText(text);
+  function copyHtmlToClipboard(plainText, htmlText) {
+    if (navigator.clipboard && window.ClipboardItem) {
+      const typeText = "text/plain";
+      const typeHtml = "text/html";
+      try {
+        const item = new ClipboardItem({
+          [typeText]: new Blob([plainText], { type: typeText }),
+          [typeHtml]: new Blob([htmlText], { type: typeHtml })
+        });
+        return navigator.clipboard.write([item]);
+      } catch (err) {
+        // Fallback for browsers passing error throwing if ClipboardItem isn't fully supported
+      }
     }
 
+    // Fallback approach
     return new Promise(function (resolve, reject) {
       try {
+        // For HTML, the execCommand approach requires selecting actual HTML elements.
+        // It's very difficult to reliably inject custom 'mso-number-format' HTML via execCommand.
+        // If Clipboard API fails, we fallback to just writing the plain text so at least they have the data.
         const helper = document.createElement("textarea");
-        helper.value = text;
+        helper.value = plainText;
         helper.setAttribute("readonly", "");
         helper.style.position = "fixed";
         helper.style.opacity = "0";
@@ -1433,7 +1569,7 @@
     tableElement.classList.add("is-hidden");
   }
 
-  function showStatus(message, tone) {
+  function showStatus(message, tone, hideToast) {
     elements.statusNote.textContent = message;
     elements.statusNote.classList.remove("is-error", "is-success");
 
@@ -1445,7 +1581,9 @@
       elements.statusNote.classList.add("is-success");
     }
 
-    showToast(message, tone);
+    if (!hideToast) {
+      showToast(message, tone);
+    }
   }
 
   function showToast(message, tone) {
