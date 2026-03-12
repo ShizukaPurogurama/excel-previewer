@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Static Excel Viewer</title>
+  <title>Excel Previewer — Browser-side workbook inspection</title>
+  <meta name="description" content="Upload an Excel, CSV or ODS workbook and inspect it entirely in your browser. No backend, no data leaves your device. Auto-detects header rows and lets you pick which columns to display.">
+  <meta property="og:title" content="Excel Previewer">
+  <meta property="og:description" content="Preview and parse Excel, CSV and ODS files directly in the browser. Zero server, instant results.">
+  <meta property="og:type" content="website">
   <link rel="stylesheet" href="styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="app.js"></script>
@@ -13,9 +17,17 @@
     <main class="app-shell">
       <header class="topbar">
         <div class="brand-block">
-          <p class="eyebrow">Static Excel Viewer</p>
-          <h1 class="brand-title">Workbook preview and header detection in the browser</h1>
-          <p class="brand-copy">No backend. Upload, inspect sheets, choose the correct Excel header row, and parse instantly.</p>
+          <div class="brand-logo" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="3" width="20" height="18" rx="2.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M2 7h20" stroke="currentColor" stroke-width="1.8"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <p class="eyebrow">Excel Previewer</p>
+            <h1 class="brand-title">Workbook inspection in the browser</h1>
+          </div>
         </div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">
           <span class="theme-toggle-indicator" aria-hidden="true"></span>
@@ -136,7 +148,7 @@
       </section>
 
       <footer class="app-footer">
-        Copyright (c) SEANG SENGLY ***
+        Copyright &copy; SEANG SENGLY
       </footer>
     </main>
   </div>
