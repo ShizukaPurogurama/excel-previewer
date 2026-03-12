@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static Excel Viewer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow">Static Excel Viewer</p>
+          <h1 class="brand-title">Workbook preview and header detection in the browser</h1>
+          <p class="brand-copy">No backend. Upload, inspect sheets, choose the correct Excel header row, and parse instantly.</p>
+        </div>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">
+          <span class="theme-toggle-indicator" aria-hidden="true"></span>
+          <span id="theme-toggle-label">Dark mode</span>
+        </button>
+      </header>
+
+      <section class="controls-panel">
+        <div class="controls-grid">
+          <label class="field">
+            <span class="field-label">Workbook</span>
+            <input id="file-input" class="file-input" type="file" accept=".xlsx,.xls,.xlsb,.ods,.csv">
+            <small>Your file stays local to this browser session.</small>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Sheet</span>
+            <select id="sheet-select" disabled>
+              <option value="">Upload a workbook first</option>
+            </select>
+          </label>
+
+          <div class="field">
+            <span class="field-label">Header row</span>
+            <div class="header-picker">
+              <input id="header-row-input" type="number" min="1" step="1" inputmode="numeric" value="1" disabled>
+              <button id="apply-header-row" class="action-button" type="button" disabled>Use row</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Reload mode</span>
+            <div class="reload-mode-picker">
+              <select id="reload-mode-select" disabled>
+                <option value="manual">Manual</option>
+                <option value="auto">Auto reload</option>
+              </select>
+              <select id="reload-interval-select" disabled>
+                <option value="1000">1s</option>
+                <option value="3000">3s</option>
+                <option value="5000">5s</option>
+                <option value="10000">10s</option>
+                <option value="30000">30s</option>
+                <option value="60000">1min</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <p id="status-note" class="status-note">
+          Upload a workbook to begin.
+        </p>
+      </section>
+
+      <section class="stats-grid" aria-label="Workbook summary">
+        <article class="stat-card">
+          <span class="stat-label">Workbook</span>
+          <strong id="stat-workbook">None loaded</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Selected sheet</span>
+          <strong id="stat-sheet">-</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Header row</span>
+          <strong id="stat-header-row">-</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Parsed records</span>
+          <strong id="stat-records">0</strong>
+        </article>
+      </section>
+
+      <section class="view-switcher" aria-label="Data view switcher">
+        <button id="view-preview-tab" class="view-tab" type="button" data-view="preview" aria-pressed="false">
+          Preview rows
+        </button>
+        <button id="view-parsed-tab" class="view-tab is-active" type="button" data-view="parsed" aria-pressed="true">
+          Parsed table
+        </button>
+      </section>
+
+      <section id="preview-section" class="panel data-panel is-hidden">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Sheet preview</p>
+            <h2>Raw worksheet rows</h2>
+          </div>
+          <p id="preview-meta" class="panel-meta">The raw preview will appear here after upload.</p>
+        </div>
+
+        <div id="preview-empty" class="empty-state">
+          Select a workbook to inspect sheet rows before parsing.
+        </div>
+
+        <div id="preview-wrap" class="table-shell is-hidden">
+          <table id="preview-table"></table>
+        </div>
+      </section>
+
+      <section id="parsed-section" class="panel data-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Parsed output</p>
+            <h2>Table data using the chosen header row</h2>
+          </div>
+          <p id="parsed-meta" class="panel-meta">Choose the Excel row that should be used as the table header.</p>
+        </div>
+
+        <div id="parsed-empty" class="empty-state">
+          Parsed table data will appear here once a sheet is loaded.
+        </div>
+
+        <div id="parsed-wrap" class="table-shell is-hidden">
+          <table id="parsed-table"></table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="columns-dialog" class="columns-dialog">
+    <form method="dialog" class="columns-dialog-shell">
+      <header class="columns-dialog-header">
+        <div>
+          <p class="section-label">Columns</p>
+          <h2>Choose parsed columns to display</h2>
+        </div>
+        <button id="close-columns-dialog" class="ghost-button" type="submit">Close</button>
+      </header>
+
+      <div class="columns-toolbar">
+        <span id="columns-dialog-count" class="column-count">0/7 selected</span>
+        <div class="columns-view-toggle">
+          <button id="columns-view-list" class="ghost-button is-active" type="button">List</button>
+          <button id="columns-view-grid" class="ghost-button" type="button">Grid</button>
+          <button id="reset-columns-button" class="ghost-button" type="button" disabled>Reset first 7</button>
+        </div>
+      </div>
+
+      <p id="columns-dialog-note" class="dialog-note">Pick up to 7 columns to display in the parsed table.</p>
+      <div id="columns-options" class="columns-options" data-view="list"></div>
+    </form>
+  </dialog>
+
+  <div id="floating-settings" class="floating-settings">
+    <button id="floating-settings-toggle" class="floating-settings-toggle" type="button" aria-expanded="false" aria-controls="floating-settings-menu">
+      ⚙
+    </button>
+
+    <div id="floating-settings-menu" class="floating-settings-menu is-hidden" role="menu" aria-label="Quick actions">
+      <button id="floating-columns-button" class="floating-menu-item" type="button" disabled role="menuitem">
+        <span class="floating-reload-title">Manage columns</span>
+        <span id="column-count" class="floating-reload-meta">0/7 selected</span>
+      </button>
+
+      <button id="floating-reload-button" class="floating-menu-item is-primary" type="button" disabled role="menuitem">
+        <span class="floating-reload-title">Reload workbook</span>
+        <span id="floating-reload-meta" class="floating-reload-meta">Load a file first</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
