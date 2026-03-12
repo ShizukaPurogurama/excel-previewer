@@ -4,17 +4,39 @@
   const THEME_STORAGE_KEY = "excel-viewer-theme";
   const COLUMN_STORAGE_KEY = "excel-viewer-columns";
   
-  const PRIORITY_COLUMNS = [
-    "TestID", 
-    "Service Name", 
-    "Sender Account", 
-    "Sender Amount", 
-    "Fee", 
-    "Receiver Account", 
-    "Receiver Amount", 
-    "TID", 
-    "Status"
-  ].map(function(c) { return c.toLowerCase(); });
+  // ---------------------------------------------------------------------------
+  // COLUMN_PRESETS — default column display configuration
+  //
+  // Each key is a sheet name (case-insensitive) or "*" for all sheets.
+  // Each value is an ordered list of column header names to show by default.
+  //
+  // Resolution order (first match wins):
+  //   1. User's saved selection in memory / localStorage  ← unchanged
+  //   2. Exact sheet-name key in COLUMN_PRESETS           ← new
+  //   3. Wildcard "*" key in COLUMN_PRESETS              ← new (replaces old PRIORITY_COLUMNS)
+  //   4. First MAX_VISIBLE_COLUMNS columns               ← unchanged fallback
+  //
+  // Names are matched case-insensitively against the actual header row.
+  // Columns not found in the file are silently skipped.
+  // ---------------------------------------------------------------------------
+  const COLUMN_PRESETS = {
+    // Global default — applies to every sheet that has no sheet-specific entry.
+    "*": [
+      "TestID",
+      "Service Name",
+      "Sender Account",
+      "Sender Amount",
+      "Fee",
+      "Receiver Account",
+      "Receiver Amount",
+      "TID",
+      "Status",
+    ],
+
+    // Per-sheet overrides — uncomment or add entries as needed:
+    // "Sheet1": ["ID", "Name", "Amount", "Date"],
+    // "Summary": ["Category", "Total"],
+  };
 
   const themeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   const FILE_PICKER_OPTIONS = {
@@ -1083,18 +1105,26 @@
       }
     }
 
-    // Fallback to priority columns
-    const priorityIndexes = [];
-    state.columnPickerHeaders.forEach(function(header, index) {
-      if (PRIORITY_COLUMNS.includes(header.toLowerCase())) {
-        priorityIndexes.push(index);
-      }
-    });
+    // Fallback: resolve from COLUMN_PRESETS (sheet-specific, then wildcard)
+    var presetNames = resolveColumnPreset(state.currentSheetName);
+    if (presetNames && presetNames.length) {
+      var presetIndexes = [];
+      state.columnPickerHeaders.forEach(function(header, index) {
+        if (presetNames.indexOf(header.toLowerCase()) !== -1) {
+          presetIndexes.push(index);
+        }
+      });
 
-    if (priorityIndexes.length) {
-      const limitedPriority = priorityIndexes.slice(0, MAX_VISIBLE_COLUMNS);
-      state.columnSelections.set(state.currentSheetName, limitedPriority);
-      return limitedPriority;
+      if (presetIndexes.length) {
+        // Re-apply the preset order defined by the user in COLUMN_PRESETS
+        presetIndexes.sort(function(a, b) {
+          return presetNames.indexOf(state.columnPickerHeaders[a].toLowerCase()) -
+                 presetNames.indexOf(state.columnPickerHeaders[b].toLowerCase());
+        });
+        var limitedPreset = presetIndexes.slice(0, MAX_VISIBLE_COLUMNS);
+        state.columnSelections.set(state.currentSheetName, limitedPreset);
+        return limitedPreset;
+      }
     }
 
     const defaults = Array.from(
@@ -1105,6 +1135,29 @@
     );
     state.columnSelections.set(state.currentSheetName, defaults);
     return defaults;
+  }
+
+  // Resolve the applicable COLUMN_PRESETS entry for a given sheet name.
+  // Returns a lowercase-normalised array of column names, or null if no preset matches.
+  function resolveColumnPreset(sheetName) {
+    if (!COLUMN_PRESETS || typeof COLUMN_PRESETS !== "object") {
+      return null;
+    }
+
+    // Sheet-specific lookup (case-insensitive key match)
+    var sheetKey = Object.keys(COLUMN_PRESETS).find(function(key) {
+      return key !== "*" && key.toLowerCase() === (sheetName || "").toLowerCase();
+    });
+
+    var names = sheetKey
+      ? COLUMN_PRESETS[sheetKey]
+      : COLUMN_PRESETS["*"];
+
+    if (!Array.isArray(names) || !names.length) {
+      return null;
+    }
+
+    return names.map(function(n) { return String(n).toLowerCase(); });
   }
 
   function getHeaderSignature(headers) {
