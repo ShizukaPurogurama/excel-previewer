@@ -18,8 +18,8 @@
   --success: #10b981;
   --danger: #ef4444;
   --button-text: #000000;
-  --shadow: 0 22px 52px rgba(0, 0, 0, 0.4);
-  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+  --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.28);
   --table-head: #2d3748;
   --table-sticky: rgba(35, 35, 35, 0.98);
   --stripe: rgba(255, 255, 255, 0.03);
@@ -82,8 +82,8 @@ body {
   font-family: "Manrope", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, var(--glow-a), transparent 35%),
-    radial-gradient(circle at top right, var(--glow-b), transparent 30%),
+    radial-gradient(circle at 8% -8%, var(--glow-a), transparent 38%),
+    radial-gradient(circle at 92% -10%, var(--glow-b), transparent 34%),
     linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
   transition: background-color 180ms ease, color 180ms ease;
 }
@@ -114,11 +114,19 @@ body::after {
   padding-bottom: clamp(80px, 12vw, 120px);
 }
 
+.app-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 8px 0 2px;
+  opacity: 0.86;
+}
+
 .app-shell {
   width: min(1400px, 100%);
   margin: 0 auto;
   display: grid;
-  gap: clamp(12px, 1.4vw, 18px);
+  gap: clamp(14px, 1.6vw, 22px);
 }
 
 .topbar {
@@ -131,14 +139,14 @@ body::after {
 
 .brand-block {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   max-width: 860px;
 }
 
 .brand-title {
   margin: 0;
-  font-size: clamp(1.1rem, 1.5vw, 1.5rem);
-  line-height: 1.08;
+  font-size: clamp(1.12rem, 1.55vw, 1.56rem);
+  line-height: 1.06;
   letter-spacing: -0.04em;
 }
 
@@ -209,7 +217,7 @@ input[type="number"]:focus-visible {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line-strong);
-  background: var(--surface);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), var(--surface));
   box-shadow: var(--shadow);
   backdrop-filter: blur(20px);
   transition:
@@ -224,8 +232,8 @@ input[type="number"]:focus-visible {
 .panel:hover,
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-  border-color: var(--accent-soft);
+  box-shadow: 0 34px 68px rgba(0, 0, 0, 0.52);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
 }
 
 .hero-card,
@@ -278,9 +286,9 @@ input[type="number"]:focus-visible {
 .hero-copy {
   max-width: 700px;
   margin: 12px 0 0;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 90%, #fff 10%);
   font-size: clamp(0.9rem, 1vw, 1rem);
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
 .hero-chip-row {
@@ -296,12 +304,12 @@ input[type="number"]:focus-visible {
   padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
-  background: var(--surface-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 92%, transparent), var(--surface-strong));
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   box-shadow: var(--shadow-soft);
   transition: all 160ms ease;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hero-chip:hover {
@@ -399,9 +407,9 @@ input[type="number"]:focus-visible {
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-soft) 65%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 72%, transparent), color-mix(in srgb, var(--surface-soft) 56%, transparent));
   border: 1px solid var(--line);
-  transition: border-color 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .field:focus-within {
@@ -440,7 +448,7 @@ input[type="number"] {
   min-height: 48px;
   border: 1px solid var(--line-strong);
   border-radius: 14px;
-  background: var(--surface-elevated);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
   color: var(--text);
   padding: 12px 16px;
   outline: none;
@@ -507,7 +515,7 @@ input[type="number"]:focus {
   max-width: 1080px;
   border: 1px solid var(--line-strong);
   border-radius: 18px;
-  background: var(--surface-elevated);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
   color: var(--text);
   box-shadow: var(--shadow);
   padding: 0;
@@ -661,14 +669,15 @@ input[type="number"]:focus {
   display: grid;
   justify-items: end;
   gap: 8px;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
 }
 
 .floating-settings-toggle {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
-  background: var(--surface-elevated);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
   color: var(--text);
   display: grid;
   place-items: center;
@@ -676,12 +685,13 @@ input[type="number"]:focus {
   font-weight: 800;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
-  transition: transform 140ms ease, border-color 140ms ease;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .floating-settings-toggle:hover {
   transform: translateY(-1px);
   border-color: var(--accent);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
 .floating-settings-menu {
@@ -702,16 +712,17 @@ input[type="number"]:focus {
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid var(--line-strong);
-  background: var(--surface-elevated);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), var(--surface-elevated));
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .floating-menu-item:hover:not(:disabled) {
   transform: translateY(-1px);
   border-color: var(--accent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .floating-menu-item.is-primary {
@@ -815,9 +826,9 @@ input:disabled {
 
 .toast {
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--line-strong);
-  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 94%, transparent), color-mix(in srgb, var(--surface-elevated) 84%, transparent));
   color: var(--text);
   box-shadow: var(--shadow-soft);
   opacity: 0;
@@ -879,7 +890,7 @@ input:disabled {
 }
 
 .panel {
-  padding: 14px;
+  padding: clamp(14px, 1.3vw, 18px);
 }
 
 .panel-heading {
@@ -913,7 +924,7 @@ input:disabled {
   max-height: clamp(300px, 52vh, 720px);
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: var(--surface-elevated);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 95%, transparent), var(--surface-elevated));
 }
 
 .table-shell.is-hidden,
@@ -948,14 +959,14 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: var(--table-head);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--table-head) 92%, transparent), var(--table-head));
   color: var(--accent);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
   letter-spacing: 0.025em;
   font-weight: 700;
   text-transform: uppercase;
-  border-bottom: 2px solid var(--accent);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent) 85%, #fff 15%);
 }
 
 th,
@@ -973,7 +984,7 @@ th,
 }
 
 td:hover {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
 }
 
 td.is-copied,
@@ -1008,12 +1019,12 @@ tbody tr.is-selected {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: var(--table-sticky);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--table-sticky) 94%, transparent), var(--table-sticky));
 }
 
 #preview-table thead tr > :first-child {
   z-index: 4;
-  background: var(--table-head);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--table-head) 92%, transparent), var(--table-head));
 }
 
 #preview-table tbody tr:nth-child(even) > :first-child {
@@ -1028,12 +1039,12 @@ tbody tr.is-selected {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: var(--table-sticky);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--table-sticky) 94%, transparent), var(--table-sticky));
 }
 
 #parsed-table thead tr > :first-child {
   z-index: 4;
-  background: var(--table-head);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--table-head) 92%, transparent), var(--table-head));
 }
 
 #parsed-table tbody tr:nth-child(even) > :first-child {
@@ -1086,6 +1097,14 @@ tbody tr.is-selected {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
+.cell-merged-anchor {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-elevated));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  text-align: center;
+  vertical-align: middle;
+  font-weight: 600;
+}
+
 @media (max-width: 1180px) {
   .intro-grid {
     grid-template-columns: 1fr;
@@ -1101,6 +1120,10 @@ tbody tr.is-selected {
 
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hero-card h2 {
+    max-width: 100%;
   }
 }
 

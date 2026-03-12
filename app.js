@@ -70,6 +70,7 @@
     sheetRows: new Map(),
     sheetMergeStats: new Map(),
     sheetMergedCells: new Map(),
+    sheetMergeAnchors: new Map(),
     headerSelections: new Map(),
     columnSelections: new Map(),
     reloadTimer: null,
@@ -434,15 +435,17 @@
       blankrows: true,
     });
     const alignedRows = alignRowsToExcelRowNumbers(sheet, rows);
-    const mergeMap = expandMergedCellsForDisplay(sheet, alignedRows);
+    const mergeMaps = expandMergedCellsForDisplay(sheet, alignedRows);
 
-    state.sheetMergedCells.set(sheetName, mergeMap);
+    state.sheetMergedCells.set(sheetName, mergeMaps.covered);
+    state.sheetMergeAnchors.set(sheetName, mergeMaps.anchors);
     state.sheetRows.set(sheetName, alignedRows);
     return alignedRows;
   }
 
   function expandMergedCellsForDisplay(sheet, rows) {
-    const mergeMap = new Set();
+    const covered = new Set();
+    const anchors = new Map();
     const merges = sheet && Array.isArray(sheet["!merges"]) ? sheet["!merges"] : [];
 
     merges.forEach(function (range) {
@@ -473,12 +476,17 @@
             rows[rowIndex][colIndex] = anchorValue;
           }
 
-          mergeMap.add(rowIndex + ":" + colIndex);
+          covered.add(rowIndex + ":" + colIndex);
         }
       }
+
+      anchors.set(startRow + ":" + startCol, {
+        rowSpan: endRow - startRow + 1,
+        colSpan: endCol - startCol + 1,
+      });
     });
 
-    return mergeMap;
+    return { covered: covered, anchors: anchors };
   }
 
   function isMergedCarryCell(sheetName, rowIndex, colIndex) {
@@ -488,6 +496,15 @@
     }
 
     return mergeMap.has(rowIndex + ":" + colIndex);
+  }
+
+  function getMergeAnchorCell(sheetName, rowIndex, colIndex) {
+    const anchors = state.sheetMergeAnchors.get(sheetName);
+    if (!anchors) {
+      return null;
+    }
+
+    return anchors.get(rowIndex + ":" + colIndex) || null;
   }
 
   function getMergeStatsForSheet(sheetName) {
@@ -727,17 +744,28 @@
       tr.append(rowButtonCell);
 
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+        if (isMergedCarryCell(state.currentSheetName, actualRowIndex, columnIndex)) {
+          continue;
+        }
+
         const value = row[columnIndex];
         const text = formatCellValue(value);
         const td = createTextCell("td", text || "-");
+        const anchor = getMergeAnchorCell(state.currentSheetName, actualRowIndex, columnIndex);
 
         if (!text) {
           td.classList.add("cell-empty");
         }
 
-        if (isMergedCarryCell(state.currentSheetName, actualRowIndex, columnIndex)) {
-          td.classList.add("cell-merged");
-          td.title = "Merged cell";
+        if (anchor) {
+          if (anchor.rowSpan > 1) {
+            td.rowSpan = anchor.rowSpan;
+          }
+          if (anchor.colSpan > 1) {
+            td.colSpan = anchor.colSpan;
+          }
+          td.classList.add("cell-merged-anchor");
+          td.title = "Merged cell (" + anchor.rowSpan + "×" + anchor.colSpan + ")";
         }
 
         tr.append(td);
@@ -1493,6 +1521,7 @@
     state.sheetRows.clear();
     state.sheetMergeStats.clear();
     state.sheetMergedCells.clear();
+    state.sheetMergeAnchors.clear();
     state.headerSelections.clear();
     state.columnSelections.clear();
     stopAutoReload();
