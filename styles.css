@@ -965,6 +965,38 @@ th,
   line-height: 1.35;
   background: transparent;
   transition: background-color 120ms ease;
+  position: relative;
+}
+
+td {
+  cursor: pointer;
+}
+
+thead th {
+  cursor: pointer;
+}
+
+td::after {
+  content: "⧉";
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 0.66rem;
+  line-height: 1;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+td:hover::after {
+  opacity: 0.55;
+}
+
+td.is-copied::after {
+  content: "✓";
+  opacity: 0.9;
+  color: var(--success);
 }
 
 td:hover {
