@@ -882,8 +882,6 @@ option {
   overflow: auto;
   -ms-overflow-style: none;
   scrollbar-width: none;
-  contain: layout paint style;
-  will-change: scroll-position;
   overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -923,8 +921,6 @@ option {
   background: var(--surface-elevated);
   cursor: pointer;
   line-height: 1.35;
-  content-visibility: auto;
-  contain-intrinsic-size: 58px;
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
