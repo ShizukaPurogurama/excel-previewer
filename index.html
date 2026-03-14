@@ -158,21 +158,31 @@
       <header class="columns-dialog-header">
         <div>
           <p class="section-label">Columns</p>
-          <h2>Choose parsed columns to display</h2>
+          <h2>Choose visible columns</h2>
         </div>
         <button id="close-columns-dialog" class="ghost-button" type="submit">Close</button>
       </header>
 
       <div class="columns-toolbar">
-        <span id="columns-dialog-count" class="column-count">0/7 selected</span>
-        <div class="columns-view-toggle">
-          <button id="columns-view-list" class="ghost-button is-active" type="button">List</button>
-          <button id="columns-view-grid" class="ghost-button" type="button">Grid</button>
-          <button id="reset-columns-button" class="ghost-button" type="button" disabled>Reset first 7</button>
+        <div class="columns-toolbar-copy">
+          <span id="columns-dialog-count" class="column-count">0/10 selected</span>
+          <span id="columns-search-meta" class="columns-search-meta">Showing 0 columns</span>
         </div>
+        <button id="reset-columns-button" class="ghost-button" type="button" disabled>Reset defaults</button>
       </div>
 
-      <p id="columns-dialog-note" class="dialog-note">Pick up to 7 columns to display in the parsed table.</p>
+      <p id="columns-dialog-note" class="dialog-note">Search the list below and select up to 10 columns for the parsed table.</p>
+      <label class="columns-search-field" for="columns-search-input">
+        <span class="columns-search-label">Search columns</span>
+        <input
+          id="columns-search-input"
+          class="columns-search-input"
+          type="search"
+          placeholder="Search by column letter or name"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </label>
       <div id="columns-options" class="columns-options" data-view="list"></div>
     </form>
   </dialog>
@@ -185,7 +195,7 @@
     <div id="floating-settings-menu" class="floating-settings-menu is-hidden" role="menu" aria-label="Quick actions">
       <button id="floating-columns-button" class="floating-menu-item" type="button" disabled role="menuitem">
         <span class="floating-reload-title">Manage columns</span>
-        <span id="column-count" class="floating-reload-meta">0/7 selected</span>
+        <span id="column-count" class="floating-reload-meta">0/10 selected</span>
       </button>
 
       <button id="floating-reload-button" class="floating-menu-item is-primary" type="button" disabled role="menuitem">

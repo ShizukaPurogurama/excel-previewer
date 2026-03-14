@@ -8,7 +8,7 @@ A lightweight browser-based Excel viewer for inspecting worksheets, selecting he
 - Sheet switching
 - Header-row selection
 - Parsed table view
-- Column visibility control (up to 7 columns)
+- Column visibility control (up to 10 columns) with search
 - Manual and auto reload modes
 - Merged-cell awareness and preview rendering
 - Click-to-copy for table cells

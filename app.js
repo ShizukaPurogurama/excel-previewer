@@ -1,6 +1,6 @@
 (function () {
   const PREVIEW_ROW_LIMIT = 24;
-  const MAX_VISIBLE_COLUMNS = 7;
+  const MAX_VISIBLE_COLUMNS = 10;
   const THEME_STORAGE_KEY = "excel-viewer-theme";
   const COLUMN_STORAGE_KEY = "excel-viewer-columns";
   
@@ -68,11 +68,11 @@
     columnsDialog: document.getElementById("columns-dialog"),
     closeColumnsDialogButton: document.getElementById("close-columns-dialog"),
     columnsOptions: document.getElementById("columns-options"),
-    columnsViewListButton: document.getElementById("columns-view-list"),
-    columnsViewGridButton: document.getElementById("columns-view-grid"),
     columnCount: document.getElementById("column-count"),
     columnsDialogCount: document.getElementById("columns-dialog-count"),
     columnsDialogNote: document.getElementById("columns-dialog-note"),
+    columnsSearchInput: document.getElementById("columns-search-input"),
+    columnsSearchMeta: document.getElementById("columns-search-meta"),
     resetColumnsButton: document.getElementById("reset-columns-button"),
     floatingReloadButton: document.getElementById("floating-reload-button"),
     floatingReloadMeta: document.getElementById("floating-reload-meta"),
@@ -113,12 +113,19 @@
     isAutoReloading: false,
     autoReloadInterval: 1000,
     activeView: "parsed",
+    previewCopyContext: null,
+    parsedCopyContext: null,
     columnPickerHeaders: [],
-    columnPickerView: "list",
+    columnPickerSearch: "",
+    columnPickerScrollTop: 0,
+    restoreColumnPickerScroll: false,
+    columnPickerFocusValue: "",
+    restoreColumnPickerFocus: false,
   };
 
   const copyFeedbackTimers = new WeakMap();
   let toastTimerSeed = 0;
+  let lockedPageScrollTop = 0;
 
   elements.fileInput.addEventListener("change", handleFileUpload);
   elements.fileInput.addEventListener("click", prepareFileInputForReload);
@@ -137,13 +144,11 @@
   elements.reloadModeSelect.addEventListener("change", handleReloadModeChange);
   elements.reloadIntervalSelect.addEventListener("change", handleReloadIntervalChange);
   elements.openColumnsDialogButton.addEventListener("click", openColumnsDialog);
+  elements.columnsDialog.addEventListener("close", unlockPageScroll);
+  elements.columnsDialog.addEventListener("cancel", unlockPageScroll);
   elements.columnsOptions.addEventListener("change", handleColumnOptionToggle);
-  elements.columnsViewListButton.addEventListener("click", function () {
-    setColumnPickerView("list");
-  });
-  elements.columnsViewGridButton.addEventListener("click", function () {
-    setColumnPickerView("grid");
-  });
+  elements.columnsSearchInput.addEventListener("input", handleColumnSearchInput);
+  elements.columnsSearchInput.addEventListener("keydown", handleColumnSearchKeydown);
   elements.resetColumnsButton.addEventListener("click", handleResetColumns);
   elements.viewPreviewTab.addEventListener("click", handleViewTabClick);
   elements.viewParsedTab.addEventListener("click", handleViewTabClick);
@@ -717,6 +722,7 @@
     const totalRows = rows.length;
 
     if (!totalRows) {
+      state.previewCopyContext = null;
       elements.previewMeta.textContent = "The selected sheet is empty. " + mergeSummary;
       showEmpty(elements.previewEmpty, elements.previewWrap);
       elements.previewEmpty.textContent = "This sheet has no rows to preview.";
@@ -746,6 +752,25 @@
       totalRows +
       ". Click a row number to use it as the header. " +
       mergeSummary;
+
+    const previewHeaders = ["Row"];
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+      previewHeaders.push(toSpreadsheetColumn(columnIndex));
+    }
+
+    state.previewCopyContext = {
+      headers: previewHeaders,
+      records: visibleRows.map(function (row, visibleRowIndex) {
+        const actualRowIndex = windowStart + visibleRowIndex;
+        const record = ["Row " + (actualRowIndex + 1)];
+
+        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+          record.push(formatCellValue(row[columnIndex]));
+        }
+
+        return record;
+      }),
+    };
 
     elements.previewTable.innerHTML = "";
 
@@ -826,19 +851,53 @@
     }
 
     setSettingsMenuOpen(false);
+    resetColumnPickerSearchState();
 
     if (typeof elements.columnsDialog.showModal === "function") {
-      showColumnsDialogNote("Pick up to " + MAX_VISIBLE_COLUMNS + " columns to display.", "");
+      lockPageScroll();
+      showColumnsDialogNote("Search the list below and select up to " + MAX_VISIBLE_COLUMNS + " columns.", "");
       elements.columnsDialog.showModal();
+      window.requestAnimationFrame(function () {
+        elements.columnsSearchInput.focus();
+        elements.columnsSearchInput.select();
+      });
     }
   }
 
-  function setColumnPickerView(view) {
-    const safeView = view === "grid" ? "grid" : "list";
-    state.columnPickerView = safeView;
-    elements.columnsOptions.dataset.view = safeView;
-    elements.columnsViewListButton.classList.toggle("is-active", safeView === "list");
-    elements.columnsViewGridButton.classList.toggle("is-active", safeView === "grid");
+  function handleColumnSearchInput(event) {
+    state.columnPickerSearch = normalizeColumnPickerSearch(event.target.value);
+    state.columnPickerScrollTop = 0;
+    renderColumnPickerSurface(
+      state.columnPickerHeaders,
+      getSelectedColumnIndexesForCurrentSheet(state.columnPickerHeaders),
+      { resetScroll: true }
+    );
+  }
+
+  function handleColumnSearchKeydown(event) {
+    if (event.key !== "Escape" || !elements.columnsSearchInput.value) {
+      return;
+    }
+
+    elements.columnsSearchInput.value = "";
+    state.columnPickerSearch = "";
+    state.columnPickerScrollTop = 0;
+    renderColumnPickerSurface(
+      state.columnPickerHeaders,
+      getSelectedColumnIndexesForCurrentSheet(state.columnPickerHeaders),
+      { resetScroll: true }
+    );
+  }
+
+  function resetColumnPickerSearchState() {
+    state.columnPickerSearch = "";
+    state.columnPickerScrollTop = 0;
+    elements.columnsSearchInput.value = "";
+    renderColumnPickerSurface(
+      state.columnPickerHeaders,
+      getSelectedColumnIndexesForCurrentSheet(state.columnPickerHeaders),
+      { resetScroll: true }
+    );
   }
 
   function handleColumnOptionToggle(event) {
@@ -856,7 +915,7 @@
       return;
     }
 
-    const current = getSelectedColumnIndexesForCurrentSheet(state.columnPickerHeaders.length);
+    const current = getSelectedColumnIndexesForCurrentSheet(state.columnPickerHeaders);
     const nextSet = new Set(current);
 
     if (target.checked) {
@@ -878,6 +937,10 @@
     const nextSelection = Array.from(nextSet).sort(function (a, b) {
       return a - b;
     });
+    state.columnPickerScrollTop = elements.columnsOptions.scrollTop;
+    state.restoreColumnPickerScroll = true;
+    state.columnPickerFocusValue = String(toggledIndex);
+    state.restoreColumnPickerFocus = true;
     state.columnSelections.set(state.currentSheetName, nextSelection);
     saveColumnSelectionsToStorage(state.columnPickerHeaders, nextSelection);
     renderSheet(state.currentSheetName);
@@ -893,6 +956,7 @@
     elements.statRecords.textContent = String(parsed.records.length);
 
     if (!parsed.headers.length) {
+      state.parsedCopyContext = null;
       syncColumnPicker([], []);
       elements.parsedMeta.textContent =
         "No columns could be derived from the chosen header row. " + mergeSummary;
@@ -916,7 +980,7 @@
       ". " +
       mergeSummary;
 
-    const selectedColumnIndexes = getSelectedColumnIndexesForCurrentSheet(parsed.headers.length);
+    const selectedColumnIndexes = getSelectedColumnIndexesForCurrentSheet(parsed.headers);
     const selectedHeaders = selectedColumnIndexes.map(function (index) {
       return parsed.headers[index];
     });
@@ -935,6 +999,13 @@
         return anchorRow[index];
       });
     });
+
+    state.parsedCopyContext = {
+      headers: selectedHeaders.slice(),
+      records: selectedRecords.map(function (record) {
+        return record.slice();
+      }),
+    };
 
     syncColumnPicker(parsed.headers, selectedColumnIndexes);
 
@@ -1075,8 +1146,9 @@
     };
   }
 
-  function getSelectedColumnIndexesForCurrentSheet(totalColumns) {
-    const safeTotal = Math.max(0, totalColumns);
+  function getSelectedColumnIndexesForCurrentSheet(headers) {
+    const activeHeaders = Array.isArray(headers) ? headers.slice() : state.columnPickerHeaders.slice();
+    const safeTotal = Math.max(0, activeHeaders.length);
     if (!safeTotal || !state.currentSheetName) {
       return [];
     }
@@ -1093,7 +1165,7 @@
     }
 
     // Attempt to restore from localStorage based on header signature
-    const savedFromStorage = loadColumnSelectionsFromStorage(state.columnPickerHeaders);
+    const savedFromStorage = loadColumnSelectionsFromStorage(activeHeaders);
     if (savedFromStorage && savedFromStorage.length) {
       const validSaved = savedFromStorage.filter(function(index) {
         return Number.isInteger(index) && index >= 0 && index < safeTotal;
@@ -1105,36 +1177,52 @@
       }
     }
 
-    // Fallback: resolve from COLUMN_PRESETS (sheet-specific, then wildcard)
-    var presetNames = resolveColumnPreset(state.currentSheetName);
+    const defaults = resolveDefaultColumnSelection(activeHeaders, state.currentSheetName);
+    state.columnSelections.set(state.currentSheetName, defaults.indexes);
+    return defaults.indexes;
+  }
+
+  function resolveDefaultColumnSelection(headers, sheetName) {
+    const activeHeaders = Array.isArray(headers) ? headers.slice() : [];
+    const safeTotal = Math.max(0, activeHeaders.length);
+
+    if (!safeTotal) {
+      return { indexes: [], source: "empty" };
+    }
+
+    // Resolve from COLUMN_PRESETS first (sheet-specific, then wildcard).
+    var presetNames = resolveColumnPreset(sheetName);
     if (presetNames && presetNames.length) {
       var presetIndexes = [];
-      state.columnPickerHeaders.forEach(function(header, index) {
-        if (presetNames.indexOf(header.toLowerCase()) !== -1) {
+      activeHeaders.forEach(function(header, index) {
+        if (presetNames.indexOf(String(header).toLowerCase()) !== -1) {
           presetIndexes.push(index);
         }
       });
 
       if (presetIndexes.length) {
-        // Re-apply the preset order defined by the user in COLUMN_PRESETS
+        // Re-apply the preset order defined by the user in COLUMN_PRESETS.
         presetIndexes.sort(function(a, b) {
-          return presetNames.indexOf(state.columnPickerHeaders[a].toLowerCase()) -
-                 presetNames.indexOf(state.columnPickerHeaders[b].toLowerCase());
+          return presetNames.indexOf(String(activeHeaders[a]).toLowerCase()) -
+                 presetNames.indexOf(String(activeHeaders[b]).toLowerCase());
         });
-        var limitedPreset = presetIndexes.slice(0, MAX_VISIBLE_COLUMNS);
-        state.columnSelections.set(state.currentSheetName, limitedPreset);
-        return limitedPreset;
+
+        return {
+          indexes: presetIndexes.slice(0, MAX_VISIBLE_COLUMNS),
+          source: "preset"
+        };
       }
     }
 
-    const defaults = Array.from(
-      { length: Math.min(MAX_VISIBLE_COLUMNS, safeTotal) },
-      function (_, index) {
-        return index;
-      }
-    );
-    state.columnSelections.set(state.currentSheetName, defaults);
-    return defaults;
+    return {
+      indexes: Array.from(
+        { length: Math.min(MAX_VISIBLE_COLUMNS, safeTotal) },
+        function (_, index) {
+          return index;
+        }
+      ),
+      source: "first-columns"
+    };
   }
 
   // Resolve the applicable COLUMN_PRESETS entry for a given sheet name.
@@ -1211,14 +1299,98 @@
 
     if (!headers.length) {
       elements.columnsOptions.innerHTML = "";
+      elements.columnsSearchMeta.textContent = "Showing 0 columns";
       elements.openColumnsDialogButton.disabled = true;
       elements.resetColumnsButton.disabled = true;
       return;
     }
 
-    renderColumnPickerOptions(headers, selectedIndexes);
+    renderColumnPickerSurface(headers, selectedIndexes, {
+      preserveScroll: state.restoreColumnPickerScroll,
+      focusValue: state.restoreColumnPickerFocus ? state.columnPickerFocusValue : "",
+    });
+    state.restoreColumnPickerScroll = false;
+    state.restoreColumnPickerFocus = false;
     elements.openColumnsDialogButton.disabled = !state.workbook;
     elements.resetColumnsButton.disabled = !state.workbook;
+  }
+
+  function renderColumnPickerSurface(headers, selectedIndexes, options) {
+    const settings = options || {};
+
+    renderSimpleColumnPickerOptions(headers, selectedIndexes);
+
+    const scrollTop = settings.preserveScroll ? state.columnPickerScrollTop : 0;
+    const focusValue = settings.focusValue || "";
+
+    window.requestAnimationFrame(function () {
+      elements.columnsOptions.scrollTop =
+        settings.resetScroll || !settings.preserveScroll
+          ? 0
+          : scrollTop;
+
+      if (!focusValue) {
+        return;
+      }
+
+      const checkbox = elements.columnsOptions.querySelector(
+        'input[type="checkbox"][value="' + focusValue + '"]'
+      );
+      if (checkbox && typeof checkbox.focus === "function") {
+        try {
+          checkbox.focus({ preventScroll: true });
+        } catch (error) {
+          checkbox.focus();
+        }
+      }
+    });
+  }
+
+  function updateColumnPickerFilterButtons() {
+    elements.columnsFilterAllButton.classList.toggle("is-active", state.columnPickerFilter === "all");
+    elements.columnsFilterSelectedButton.classList.toggle("is-active", state.columnPickerFilter === "selected");
+    elements.columnsFilterHiddenButton.classList.toggle("is-active", state.columnPickerFilter === "hidden");
+    elements.columnsFilterAllButton.setAttribute("aria-pressed", String(state.columnPickerFilter === "all"));
+    elements.columnsFilterSelectedButton.setAttribute("aria-pressed", String(state.columnPickerFilter === "selected"));
+    elements.columnsFilterHiddenButton.setAttribute("aria-pressed", String(state.columnPickerFilter === "hidden"));
+  }
+
+  function renderSelectedColumnsSummary(headers, selectedIndexes) {
+    const fragment = document.createDocumentFragment();
+    const label = document.createElement("span");
+    label.className = "columns-selected-label";
+    label.textContent = "Selected columns";
+    fragment.append(label);
+
+    if (!selectedIndexes.length) {
+      const empty = document.createElement("span");
+      empty.className = "columns-selected-empty";
+      empty.textContent = "None selected";
+      fragment.append(empty);
+      elements.columnsSelectedSummary.innerHTML = "";
+      elements.columnsSelectedSummary.append(fragment);
+      return;
+    }
+
+    selectedIndexes.forEach(function (index) {
+      const chip = document.createElement("span");
+      chip.className = "column-chip";
+      chip.title = headers[index] || "";
+
+      const key = document.createElement("span");
+      key.className = "column-chip-key";
+      key.textContent = toSpreadsheetColumn(index);
+
+      const name = document.createElement("span");
+      name.className = "column-chip-name";
+      name.textContent = headers[index] || ("Column " + (index + 1));
+
+      chip.append(key, name);
+      fragment.append(chip);
+    });
+
+    elements.columnsSelectedSummary.innerHTML = "";
+    elements.columnsSelectedSummary.append(fragment);
   }
 
   function renderColumnPickerOptions(headers, selectedIndexes) {
@@ -1247,24 +1419,243 @@
     setColumnPickerView(state.columnPickerView);
   }
 
+  function renderFilteredColumnPickerOptions(headers, selectedIndexes) {
+    const selectedSet = new Set(selectedIndexes);
+    const filteredOptions = getFilteredColumnOptions(headers, selectedSet);
+    const fragment = document.createDocumentFragment();
+
+    if (!filteredOptions.length) {
+      const empty = document.createElement("div");
+      empty.className = "columns-options-empty";
+      empty.textContent =
+        state.columnPickerSearch || state.columnPickerFilter !== "all"
+          ? "No columns match the current search or filter."
+          : "No columns are available.";
+
+      elements.columnsOptions.replaceChildren(empty);
+      renderColumnPickerSearchMeta(headers.length, 0, 0);
+      setColumnPickerView(state.columnPickerView);
+      return;
+    }
+
+    filteredOptions.forEach(function (item) {
+      const optionLabel = document.createElement("label");
+      optionLabel.className = "columns-option";
+      optionLabel.classList.toggle("is-selected", item.selected);
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = String(item.index);
+      checkbox.checked = item.selected;
+      checkbox.disabled = !state.workbook;
+
+      const key = document.createElement("span");
+      key.className = "columns-option-key";
+      key.textContent = item.key;
+
+      const textWrap = document.createElement("span");
+      textWrap.className = "columns-option-text";
+
+      const name = document.createElement("span");
+      name.className = "columns-option-name";
+      name.textContent = item.label;
+
+      const meta = document.createElement("span");
+      meta.className = "columns-option-meta";
+      meta.textContent = item.selected ? "Selected" : "Available";
+
+      textWrap.append(name, meta);
+      optionLabel.append(checkbox, key, textWrap);
+      fragment.append(optionLabel);
+    });
+
+    elements.columnsOptions.replaceChildren(fragment);
+    renderColumnPickerSearchMeta(
+      headers.length,
+      filteredOptions.length,
+      filteredOptions.filter(function (item) {
+        return item.selected;
+      }).length
+    );
+    setColumnPickerView(state.columnPickerView);
+  }
+
+  function getFilteredColumnOptions(headers, selectedSet) {
+    const query = state.columnPickerSearch;
+
+    return headers.reduce(function (items, label, index) {
+      const key = toSpreadsheetColumn(index);
+      const isSelected = selectedSet.has(index);
+      const matchesFilter =
+        state.columnPickerFilter === "all" ||
+        (state.columnPickerFilter === "selected" && isSelected) ||
+        (state.columnPickerFilter === "hidden" && !isSelected);
+
+      if (!matchesFilter) {
+        return items;
+      }
+
+      const haystack = (key + " " + String(label || "")).toLowerCase();
+      if (query && haystack.indexOf(query) === -1) {
+        return items;
+      }
+
+      items.push({
+        index: index,
+        key: key,
+        label: label || ("Column " + (index + 1)),
+        selected: isSelected,
+      });
+      return items;
+    }, []);
+  }
+
+  function renderColumnPickerSearchMeta(totalColumns, visibleColumns, visibleSelectedColumns) {
+    let text = visibleColumns + " of " + totalColumns + " columns";
+
+    if (visibleSelectedColumns) {
+      text += " | " + visibleSelectedColumns + " selected";
+    }
+
+    elements.columnsSearchMeta.textContent = text;
+  }
+
+  function normalizeColumnPickerSearch(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  }
+
+  function renderSimpleColumnPickerOptions(headers, selectedIndexes) {
+    const selectedSet = new Set(selectedIndexes);
+    const visibleOptions = getVisibleColumnOptions(headers, selectedSet);
+    const fragment = document.createDocumentFragment();
+
+    if (!visibleOptions.length) {
+      const empty = document.createElement("div");
+      empty.className = "columns-options-empty";
+      empty.textContent = state.columnPickerSearch
+        ? "No columns match your search."
+        : "No columns are available.";
+
+      elements.columnsOptions.replaceChildren(empty);
+      renderColumnPickerSearchMeta(headers.length, 0, 0);
+      return;
+    }
+
+    visibleOptions.forEach(function (item) {
+      const optionLabel = document.createElement("label");
+      optionLabel.className = "columns-option";
+      optionLabel.classList.toggle("is-selected", item.selected);
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = String(item.index);
+      checkbox.checked = item.selected;
+      checkbox.disabled = !state.workbook;
+
+      const key = document.createElement("span");
+      key.className = "columns-option-key";
+      key.textContent = item.key;
+
+      const name = document.createElement("span");
+      name.className = "columns-option-name";
+      name.textContent = item.label;
+
+      optionLabel.append(checkbox, key, name);
+      fragment.append(optionLabel);
+    });
+
+    elements.columnsOptions.replaceChildren(fragment);
+    renderColumnPickerSearchMeta(
+      headers.length,
+      visibleOptions.length,
+      visibleOptions.filter(function (item) {
+        return item.selected;
+      }).length
+    );
+  }
+
+  function getVisibleColumnOptions(headers, selectedSet) {
+    const query = state.columnPickerSearch;
+
+    return headers.reduce(function (items, label, index) {
+      const key = toSpreadsheetColumn(index);
+      const haystack = (key + " " + String(label || "")).toLowerCase();
+
+      if (query && haystack.indexOf(query) === -1) {
+        return items;
+      }
+
+      items.push({
+        index: index,
+        key: key,
+        label: label || ("Column " + (index + 1)),
+        selected: selectedSet.has(index),
+      });
+      return items;
+    }, []).sort(function (a, b) {
+      if (a.selected !== b.selected) {
+        return a.selected ? -1 : 1;
+      }
+
+      return a.index - b.index;
+    });
+  }
+
+  function lockPageScroll() {
+    lockedPageScrollTop =
+      window.scrollY ||
+      window.pageYOffset ||
+      document.documentElement.scrollTop ||
+      0;
+
+    document.body.style.position = "fixed";
+    document.body.style.top = "-" + lockedPageScrollTop + "px";
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockPageScroll() {
+    const top = document.body.style.top;
+
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+
+    const scrollTop = top ? Math.abs(Number.parseInt(top, 10)) || lockedPageScrollTop : lockedPageScrollTop;
+    window.scrollTo(0, scrollTop);
+    lockedPageScrollTop = 0;
+  }
+
   function handleResetColumns() {
     if (!state.currentSheetName) {
       return;
     }
 
-    const optionValues = state.columnPickerHeaders.map(function (_, index) {
-      return index;
-    });
-
-    if (!optionValues.length) {
+    if (!state.columnPickerHeaders.length) {
       return;
     }
 
-    const defaults = optionValues.slice(0, MAX_VISIBLE_COLUMNS);
-    state.columnSelections.set(state.currentSheetName, defaults);
-    saveColumnSelectionsToStorage(state.columnPickerHeaders, defaults);
+    const defaults = resolveDefaultColumnSelection(
+      state.columnPickerHeaders,
+      state.currentSheetName
+    );
+    state.columnSelections.set(state.currentSheetName, defaults.indexes);
+    saveColumnSelectionsToStorage(state.columnPickerHeaders, defaults.indexes);
     renderSheet(state.currentSheetName);
-    showColumnsDialogNote("Reset to first " + defaults.length + " columns.", "success");
+    showColumnsDialogNote(
+      defaults.source === "preset"
+        ? "Reset to configured default columns."
+        : "Reset to first " + defaults.indexes.length + " columns.",
+      "success"
+    );
   }
 
   function makeUniqueHeaderName(value, columnIndex, seenHeaders) {
@@ -1423,21 +1814,26 @@
       const colIndex = ths.indexOf(cell);
       
       if (colIndex !== -1) {
-        const rows = Array.from(table.querySelectorAll("tbody tr"));
-        const columnDataText = rows.map(function(row) {
-          const td = row.children[colIndex];
-          if (!td) return "";
-          return td.dataset.formula || (td.classList.contains("cell-empty") ? "" : td.textContent.trim());
+        const copyContext = getTableCopyContext(table);
+        if (!copyContext || !Array.isArray(copyContext.records) || colIndex >= copyContext.headers.length) {
+          return;
+        }
+
+        if (!copyContext.records.length) {
+          showStatus("No rows to copy from this column.", "error");
+          return;
+        }
+
+        const columnDataText = copyContext.records.map(function (row) {
+          return getClipboardCellText(row[colIndex]);
         });
-        
         const columnDataPlain = columnDataText.join("\n");
-        const columnDataHtml = "<table>" + rows.map(function(row) {
-          const td = row.children[colIndex];
-          if (!td) return "<tr><td></td></tr>";
-          const inner = td.querySelector("a") ? td.innerHTML : (td.classList.contains("cell-empty") ? "" : td.textContent.trim());
-          return "<tr><td style=\"mso-number-format:'\@'\">" + inner + "</td></tr>";
-        }).join("") + "</table>";
-        
+        const columnDataHtml = buildClipboardTableHtml(
+          columnDataText.map(function (value) {
+            return [value];
+          })
+        );
+
         copyHtmlToClipboard(columnDataPlain, columnDataHtml)
           .then(function () {
             flashCopiedCell(cell);
@@ -1455,8 +1851,7 @@
     }
 
     let text = cell.dataset.formula || (cell.classList.contains("cell-empty") ? "" : cell.textContent.trim());
-    let innerContent = cell.querySelector("a") ? cell.innerHTML : (cell.classList.contains("cell-empty") ? "" : cell.textContent.trim());
-    let html = "<table><tr><td style=\"mso-number-format:'\@'\">" + innerContent + "</td></tr></table>";
+    let html = buildClipboardTableHtml([[text]]);
 
     copyHtmlToClipboard(text, html)
       .then(function () {
@@ -1467,6 +1862,74 @@
       .catch(function () {
         showStatus("Copy failed. Please copy manually.", "error");
       });
+  }
+
+  function getTableCopyContext(table) {
+    if (table === elements.previewTable) {
+      return state.previewCopyContext;
+    }
+
+    if (table === elements.parsedTable) {
+      return state.parsedCopyContext;
+    }
+
+    return null;
+  }
+
+  function getClipboardCellText(value) {
+    if (value === null || value === undefined) {
+      return "";
+    }
+
+    return String(value);
+  }
+
+  function buildClipboardTableHtml(rows) {
+    return (
+      "<table>" +
+      rows
+        .map(function (row) {
+          return (
+            "<tr>" +
+            row
+              .map(function (value) {
+                return (
+                  "<td style=\"mso-number-format:'\\@'\">" +
+                  getClipboardCellHtml(value) +
+                  "</td>"
+                );
+              })
+              .join("") +
+            "</tr>"
+          );
+        })
+        .join("") +
+      "</table>"
+    );
+  }
+
+  function getClipboardCellHtml(value) {
+    const text = getClipboardCellText(value);
+    const hyperMatch = text
+      .trim()
+      .match(/^=HYPERLINK\(\s*"([^"]+)"\s*(?:,\s*"([^"]+)")?\s*\)$/i);
+
+    if (hyperMatch) {
+      const url = escapeHtml(hyperMatch[1]);
+      const label = escapeHtml(hyperMatch[2] || hyperMatch[1]);
+      return "<a href=\"" + url + "\">" + label + "</a>";
+    }
+
+    return escapeHtml(text);
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function copyHtmlToClipboard(plainText, htmlText) {
@@ -1777,6 +2240,13 @@
     stopAutoReload();
     state.isAutoReloading = false;
     state.autoReloadInterval = 1000;
+    state.previewCopyContext = null;
+    state.parsedCopyContext = null;
+    state.columnPickerSearch = "";
+    state.columnPickerScrollTop = 0;
+    state.restoreColumnPickerScroll = false;
+    state.columnPickerFocusValue = "";
+    state.restoreColumnPickerFocus = false;
 
     elements.sheetSelect.innerHTML = '<option value="">Upload a workbook first</option>';
     elements.sheetSelect.disabled = true;
@@ -1789,11 +2259,13 @@
     elements.reloadIntervalSelect.disabled = true;
     state.columnPickerHeaders = [];
     elements.columnsOptions.innerHTML = "";
+    elements.columnsSearchInput.value = "";
+    elements.columnsSearchMeta.textContent = "Showing 0 columns";
     elements.columnCount.textContent = "0/" + MAX_VISIBLE_COLUMNS + " selected";
     elements.columnsDialogCount.textContent = "0/" + MAX_VISIBLE_COLUMNS + " selected";
     elements.resetColumnsButton.disabled = true;
     elements.openColumnsDialogButton.disabled = true;
-    showColumnsDialogNote("Pick up to " + MAX_VISIBLE_COLUMNS + " columns to display in the parsed table.", "");
+    showColumnsDialogNote("Search the list below and select up to " + MAX_VISIBLE_COLUMNS + " columns.", "");
 
     elements.previewTable.innerHTML = "";
     elements.parsedTable.innerHTML = "";
