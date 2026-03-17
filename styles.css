@@ -266,7 +266,14 @@ body::after {
 
 .brand-text {
   display: grid;
-  gap: 3px;
+  gap: 4px;
+}
+
+.brand-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .brand-title {
@@ -287,11 +294,28 @@ body::after {
   opacity: 0.7;
 }
 
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+}
+
 .brand-copy {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
-  display: none;
+  display: block;
+  max-width: 62ch;
+  font-size: 0.92rem;
 }
 
 /* Theme toggle */
@@ -338,7 +362,9 @@ body::after {
 /* Focus rings */
 .theme-toggle:focus-visible,
 .action-button:focus-visible,
+.view-tab:focus-visible,
 .floating-reload-button:focus-visible,
+.floating-menu-item:focus-visible,
 .row-selector:focus-visible,
 .file-input:focus-visible,
 select:focus-visible,
@@ -678,6 +704,8 @@ option {
   margin: 0;
   padding: 18px;
   display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  align-content: stretch;
   gap: 14px;
   max-height: calc(100vh - 24px);
   overflow: hidden;
@@ -878,7 +906,7 @@ option {
 }
 
 .columns-options {
-  max-height: min(62vh, 560px);
+  min-height: 0;
   overflow: auto;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -1181,9 +1209,9 @@ input:disabled {
    ============================================================ */
 .view-switcher {
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  width: min(380px, 100%);
+  width: min(560px, 100%);
 }
 
 .view-tab {
@@ -1216,6 +1244,135 @@ input:disabled {
 
 .data-panel.is-hidden {
   display: none;
+}
+
+/* ============================================================
+   CHANGELOG
+   ============================================================ */
+.changelog-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.changelog-card,
+.changelog-entry {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-soft);
+}
+
+.changelog-card {
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.changelog-card.is-primary {
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 52%),
+    var(--surface-elevated);
+  box-shadow: var(--shadow);
+}
+
+.changelog-card-label,
+.changelog-entry-version,
+.changelog-entry-date {
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.changelog-card-title,
+.changelog-entry-title {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.35vw, 1.3rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.changelog-card-body,
+.changelog-card-supporting,
+.changelog-entry-summary,
+.changelog-points {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.changelog-card-supporting,
+.changelog-entry-summary,
+.changelog-points {
+  color: var(--muted);
+}
+
+.changelog-list {
+  display: grid;
+  gap: 16px;
+}
+
+.changelog-entry {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.changelog-entry-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.changelog-entry-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.changelog-entry-stage {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.changelog-entry-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.changelog-entry-section {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.changelog-entry-section-title {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+  letter-spacing: -0.02em;
+}
+
+.changelog-points {
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.changelog-points li::marker {
+  color: var(--accent);
 }
 
 /* ============================================================
@@ -1605,6 +1762,15 @@ tbody tr.is-selected {
   padding: 10px 0 2px;
   opacity: 0.70;
   letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.footer-separator {
+  opacity: 0.55;
 }
 
 /* ============================================================
@@ -1629,6 +1795,11 @@ tbody tr.is-selected {
 
   .hero-card h2 {
     max-width: 100%;
+  }
+
+  .changelog-summary,
+  .changelog-entry-sections {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1667,6 +1838,14 @@ tbody tr.is-selected {
     text-align: left;
   }
 
+  .view-switcher {
+    width: 100%;
+  }
+
+  .changelog-entry-header {
+    flex-direction: column;
+  }
+
   th,
   td {
     min-width: 108px;
@@ -1683,6 +1862,10 @@ tbody tr.is-selected {
 
   .app-shell {
     gap: 12px;
+  }
+
+  .brand-meta {
+    align-items: start;
   }
 
   .brand-title {
@@ -1717,7 +1900,15 @@ tbody tr.is-selected {
   }
 
   .columns-options {
-    max-height: 56vh;
+    min-height: 0;
+  }
+
+  .view-switcher {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-separator {
+    display: none;
   }
 
   .floating-settings {

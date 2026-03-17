@@ -3,6 +3,35 @@
   const MAX_VISIBLE_COLUMNS = 10;
   const THEME_STORAGE_KEY = "excel-viewer-theme";
   const COLUMN_STORAGE_KEY = "excel-viewer-columns";
+  const CHANGELOG_ENTRIES = Object.freeze([
+    Object.freeze({
+      version: "1.3.0",
+      dateLabel: "March 17, 2026",
+      stage: "Current release",
+      headline: "Cleaner money display, steadier column scrolling, and a built-in update page.",
+      summary:
+        "This release focuses on everyday workbook review. It makes payment amounts easier to read, keeps long column lists more stable while you browse them, and adds a plain-language place to understand what changed.",
+      audience:
+        "Operations, finance, QA, and support teammates who need quick spreadsheet review without technical release notes.",
+      focus:
+        "Clarity first: fewer surprises while scrolling, clearer amount fields, and easier communication for non-technical users.",
+      highlights: [
+        "Amount columns can automatically show $ for USD and ៛ for KHR when the sheet includes a matching currency column.",
+        "The column picker keeps its place more reliably, reducing the jump-back effect in long lists.",
+        "A new What's new page explains updates in simple language and shows the app version in a visible place.",
+      ],
+      impact: [
+        "Payment and settlement files are easier to scan because the currency sign is visible at a glance.",
+        "Long column lists feel more dependable during review and cleanup work.",
+        "Anyone on the team can quickly see what improved without reading code or commit history.",
+      ],
+      notes: [
+        "Your files still stay local in the browser unless you choose to reopen or reload them from your own device.",
+        "The parsed table remains the main working view. The changelog page is read-only and there to keep updates easy to understand.",
+      ],
+    }),
+  ]);
+  const APP_VERSION = "v" + CHANGELOG_ENTRIES[0].version;
   
   // ---------------------------------------------------------------------------
   // COLUMN_PRESETS — default column display configuration
@@ -37,6 +66,11 @@
     // "Sheet1": ["ID", "Name", "Amount", "Date"],
     // "Summary": ["Category", "Total"],
   };
+  const SUPPORTED_CURRENCY_CODES = Object.freeze({
+    USD: true,
+    KHR: true,
+  });
+  const currencyFormatterCache = new Map();
 
   const themeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
   const FILE_PICKER_OPTIONS = {
@@ -64,6 +98,8 @@
     reloadIntervalSelect: document.getElementById("reload-interval-select"),
     settingsToggleButton: document.getElementById("floating-settings-toggle"),
     settingsMenu: document.getElementById("floating-settings-menu"),
+    floatingChangelogButton: document.getElementById("floating-changelog-button"),
+    floatingChangelogMeta: document.getElementById("floating-changelog-meta"),
     openColumnsDialogButton: document.getElementById("floating-columns-button"),
     columnsDialog: document.getElementById("columns-dialog"),
     closeColumnsDialogButton: document.getElementById("close-columns-dialog"),
@@ -90,12 +126,18 @@
     parsedTable: document.getElementById("parsed-table"),
     viewPreviewTab: document.getElementById("view-preview-tab"),
     viewParsedTab: document.getElementById("view-parsed-tab"),
+    viewChangelogTab: document.getElementById("view-changelog-tab"),
     previewSection: document.getElementById("preview-section"),
     parsedSection: document.getElementById("parsed-section"),
+    changelogSection: document.getElementById("changelog-section"),
+    changelogSummary: document.getElementById("changelog-summary"),
+    changelogList: document.getElementById("changelog-list"),
     statWorkbook: document.getElementById("stat-workbook"),
     statSheet: document.getElementById("stat-sheet"),
     statHeaderRow: document.getElementById("stat-header-row"),
     statRecords: document.getElementById("stat-records"),
+    appVersionBadge: document.getElementById("app-version-badge"),
+    footerVersion: document.getElementById("footer-version"),
   };
 
   const state = {
@@ -116,6 +158,7 @@
     previewCopyContext: null,
     parsedCopyContext: null,
     columnPickerHeaders: [],
+    columnPickerSelectedIndexes: [],
     columnPickerSearch: "",
     columnPickerScrollTop: 0,
     restoreColumnPickerScroll: false,
@@ -143,15 +186,20 @@
   elements.parsedTable.addEventListener("click", handleTableCellCopyClick);
   elements.reloadModeSelect.addEventListener("change", handleReloadModeChange);
   elements.reloadIntervalSelect.addEventListener("change", handleReloadIntervalChange);
+  elements.floatingChangelogButton.addEventListener("click", handleOpenChangelogView);
   elements.openColumnsDialogButton.addEventListener("click", openColumnsDialog);
   elements.columnsDialog.addEventListener("close", unlockPageScroll);
   elements.columnsDialog.addEventListener("cancel", unlockPageScroll);
   elements.columnsOptions.addEventListener("change", handleColumnOptionToggle);
+  elements.columnsOptions.addEventListener("scroll", handleColumnsOptionsScroll, {
+    passive: true,
+  });
   elements.columnsSearchInput.addEventListener("input", handleColumnSearchInput);
   elements.columnsSearchInput.addEventListener("keydown", handleColumnSearchKeydown);
   elements.resetColumnsButton.addEventListener("click", handleResetColumns);
   elements.viewPreviewTab.addEventListener("click", handleViewTabClick);
   elements.viewParsedTab.addEventListener("click", handleViewTabClick);
+  elements.viewChangelogTab.addEventListener("click", handleViewTabClick);
   elements.settingsToggleButton.addEventListener("click", toggleSettingsMenu);
   document.addEventListener("click", handleOutsideSettingsClick);
 
@@ -176,16 +224,27 @@
   }
 
   function setActiveView(view) {
-    const safeView = view === "parsed" ? "parsed" : "preview";
+    const safeView =
+      view === "preview" || view === "changelog" ? view : "parsed";
     state.activeView = safeView;
 
     const isPreview = safeView === "preview";
+    const isParsed = safeView === "parsed";
+    const isChangelog = safeView === "changelog";
     elements.previewSection.classList.toggle("is-hidden", !isPreview);
-    elements.parsedSection.classList.toggle("is-hidden", isPreview);
+    elements.parsedSection.classList.toggle("is-hidden", !isParsed);
+    elements.changelogSection.classList.toggle("is-hidden", !isChangelog);
     elements.viewPreviewTab.classList.toggle("is-active", isPreview);
-    elements.viewParsedTab.classList.toggle("is-active", !isPreview);
+    elements.viewParsedTab.classList.toggle("is-active", isParsed);
+    elements.viewChangelogTab.classList.toggle("is-active", isChangelog);
     elements.viewPreviewTab.setAttribute("aria-pressed", String(isPreview));
-    elements.viewParsedTab.setAttribute("aria-pressed", String(!isPreview));
+    elements.viewParsedTab.setAttribute("aria-pressed", String(isParsed));
+    elements.viewChangelogTab.setAttribute("aria-pressed", String(isChangelog));
+  }
+
+  function handleOpenChangelogView() {
+    setSettingsMenuOpen(false);
+    setActiveView("changelog");
   }
 
   function toggleSettingsMenu() {
@@ -947,6 +1006,10 @@
     showColumnsDialogNote("Applied " + nextSelection.length + " selected columns.", "success");
   }
 
+  function handleColumnsOptionsScroll() {
+    state.columnPickerScrollTop = elements.columnsOptions.scrollTop;
+  }
+
   function renderParsedTable(rows, headerIndex, mergeSummary) {
     const parsed = buildParsedTable(rows, headerIndex);
 
@@ -1105,6 +1168,7 @@
     const headers = activeColumns.map(function (columnIndex) {
       return makeUniqueHeaderName(headerRow[columnIndex], columnIndex, seenHeaders);
     });
+    const amountCurrencyColumns = buildAmountCurrencyColumnLookup(headers);
 
     const rowsWithMeta = dataRows.reduce(function (acc, row, dataRowIndex) {
       const hasData = activeColumns.some(function (columnIndex) {
@@ -1118,8 +1182,14 @@
       const sourceRowIndex = safeHeaderIndex + 1 + dataRowIndex;
 
       acc.records.push(
-        activeColumns.map(function (columnIndex) {
-          return formatCellValue(row[columnIndex]);
+        activeColumns.map(function (columnIndex, activeHeaderIndex) {
+          return formatCellValue(row[columnIndex], {
+            activeColumns: activeColumns,
+            activeHeaderIndex: activeHeaderIndex,
+            amountCurrencyColumns: amountCurrencyColumns,
+            headers: headers,
+            row: row,
+          });
         })
       );
 
@@ -1291,7 +1361,15 @@
   }
 
   function syncColumnPicker(headers, selectedIndexes) {
+    const previousHeaders = state.columnPickerHeaders.slice();
+    const previousSelectedIndexes = state.columnPickerSelectedIndexes.slice();
+    const preserveOpenDialogScroll =
+      elements.columnsDialog.open &&
+      arraysEqual(previousHeaders, headers) &&
+      arraysEqual(previousSelectedIndexes, selectedIndexes);
+
     state.columnPickerHeaders = headers.slice();
+    state.columnPickerSelectedIndexes = selectedIndexes.slice();
 
     const countText = selectedIndexes.length + "/" + MAX_VISIBLE_COLUMNS + " selected";
     elements.columnCount.textContent = countText;
@@ -1306,7 +1384,7 @@
     }
 
     renderColumnPickerSurface(headers, selectedIndexes, {
-      preserveScroll: state.restoreColumnPickerScroll,
+      preserveScroll: state.restoreColumnPickerScroll || preserveOpenDialogScroll,
       focusValue: state.restoreColumnPickerFocus ? state.columnPickerFocusValue : "",
     });
     state.restoreColumnPickerScroll = false;
@@ -1525,6 +1603,20 @@
       .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
+  }
+
+  function arraysEqual(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    for (let index = 0; index < left.length; index += 1) {
+      if (left[index] !== right[index]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   function renderSimpleColumnPickerOptions(headers, selectedIndexes) {
@@ -2096,7 +2188,7 @@
     return String(value).trim();
   }
 
-  function formatCellValue(value) {
+  function formatCellValue(value, options) {
     if (value === null || value === undefined || value === "") {
       return "";
     }
@@ -2109,7 +2201,343 @@
       });
     }
 
+    if (options) {
+      const amountText = formatAmountCellValue(value, options);
+      if (amountText !== null) {
+        return amountText;
+      }
+    }
+
     return String(value);
+  }
+
+  function formatAmountCellValue(value, options) {
+    if (!options || !Array.isArray(options.headers)) {
+      return null;
+    }
+
+    const header = options.headers[options.activeHeaderIndex] || "";
+    if (!isAmountColumnHeader(header)) {
+      return null;
+    }
+
+    const currencyCode = resolveAmountCurrencyCode(value, options);
+    if (!currencyCode) {
+      return null;
+    }
+
+    const numericValue = parseCurrencyAmount(value);
+    if (numericValue === null) {
+      return null;
+    }
+
+    const fractionDigits = resolveCurrencyFractionDigits(value);
+    return getCurrencyFormatter(currencyCode, fractionDigits).format(numericValue);
+  }
+
+  function resolveAmountCurrencyCode(value, options) {
+    const pairedCurrencyCode = resolvePairedCurrencyCode(options);
+    if (pairedCurrencyCode) {
+      return pairedCurrencyCode;
+    }
+
+    const headerCurrencyCode = getSupportedCurrencyCode(options.headers[options.activeHeaderIndex]);
+    if (headerCurrencyCode) {
+      return headerCurrencyCode;
+    }
+
+    return getSupportedCurrencyCode(value);
+  }
+
+  function resolvePairedCurrencyCode(options) {
+    if (
+      !options ||
+      !Array.isArray(options.amountCurrencyColumns) ||
+      !Array.isArray(options.activeColumns) ||
+      !Array.isArray(options.row)
+    ) {
+      return "";
+    }
+
+    const currencyHeaderIndex = options.amountCurrencyColumns[options.activeHeaderIndex];
+    if (!Number.isInteger(currencyHeaderIndex) || currencyHeaderIndex < 0) {
+      return "";
+    }
+
+    const sourceColumnIndex = options.activeColumns[currencyHeaderIndex];
+    if (!Number.isInteger(sourceColumnIndex) || sourceColumnIndex < 0) {
+      return "";
+    }
+
+    return getSupportedCurrencyCode(options.row[sourceColumnIndex]);
+  }
+
+  function getSupportedCurrencyCode(value) {
+    const matches = normalizeCell(value).toUpperCase().match(/\b(?:USD|KHR)\b/);
+    if (!matches || !SUPPORTED_CURRENCY_CODES[matches[0]]) {
+      return "";
+    }
+
+    return matches[0];
+  }
+
+  function parseCurrencyAmount(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    const text = normalizeCell(value);
+    if (!text) {
+      return null;
+    }
+
+    const normalized = text
+      .replace(/^\((.*)\)$/, "-$1")
+      .replace(/\b(?:USD|KHR)\b/gi, "")
+      .replace(/[$៛,\s]/g, "");
+
+    if (!/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(normalized)) {
+      return null;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function resolveCurrencyFractionDigits(value) {
+    const text = normalizeCell(value).replace(/,/g, "");
+    const fractionMatch = text.match(/\.(\d+)/);
+    return fractionMatch ? Math.min(fractionMatch[1].length, 6) : 0;
+  }
+
+  function getCurrencyFormatter(currencyCode, fractionDigits) {
+    const safeFractionDigits =
+      Number.isInteger(fractionDigits) && fractionDigits >= 0 ? fractionDigits : 0;
+    const cacheKey = currencyCode + ":" + safeFractionDigits;
+
+    if (!currencyFormatterCache.has(cacheKey)) {
+      currencyFormatterCache.set(
+        cacheKey,
+        new Intl.NumberFormat(undefined, {
+          currency: currencyCode,
+          currencyDisplay: "narrowSymbol",
+          maximumFractionDigits: safeFractionDigits,
+          minimumFractionDigits: safeFractionDigits,
+          style: "currency",
+        })
+      );
+    }
+
+    return currencyFormatterCache.get(cacheKey);
+  }
+
+  function buildAmountCurrencyColumnLookup(headers) {
+    const currencyIndexes = headers.reduce(function (indexes, header, index) {
+      if (isCurrencyColumnHeader(header)) {
+        indexes.push(index);
+      }
+
+      return indexes;
+    }, []);
+
+    const genericCurrencyIndex = currencyIndexes.find(function (index) {
+      return getHeaderSemanticBase(headers[index], "currency") === "";
+    });
+
+    return headers.map(function (header) {
+      if (!isAmountColumnHeader(header)) {
+        return -1;
+      }
+
+      const amountBase = getHeaderSemanticBase(header, "amount");
+      const matchedCurrencyIndex = currencyIndexes.find(function (index) {
+        return getHeaderSemanticBase(headers[index], "currency") === amountBase;
+      });
+
+      if (matchedCurrencyIndex !== undefined) {
+        return matchedCurrencyIndex;
+      }
+
+      if (genericCurrencyIndex !== undefined) {
+        return genericCurrencyIndex;
+      }
+
+      return currencyIndexes.length === 1 ? currencyIndexes[0] : -1;
+    });
+  }
+
+  function isAmountColumnHeader(header) {
+    return /\b(amount|amt)\b/.test(normalizeHeaderLabel(header));
+  }
+
+  function isCurrencyColumnHeader(header) {
+    return /\b(currency|ccy|curr)\b/.test(normalizeHeaderLabel(header));
+  }
+
+  function getHeaderSemanticBase(header, type) {
+    const pattern =
+      type === "currency" ? /\b(currency|ccy|curr)\b/g : /\b(amount|amt)\b/g;
+
+    return normalizeHeaderLabel(header).replace(pattern, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function normalizeHeaderLabel(header) {
+    return normalizeCell(header)
+      .toLowerCase()
+      .replace(/[_-]+/g, " ")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function initializeAppMeta() {
+    if (elements.appVersionBadge) {
+      elements.appVersionBadge.textContent = APP_VERSION;
+    }
+
+    if (elements.footerVersion) {
+      elements.footerVersion.textContent = APP_VERSION;
+    }
+
+    if (elements.floatingChangelogMeta) {
+      elements.floatingChangelogMeta.textContent = "See what is new in " + APP_VERSION;
+    }
+
+    renderChangelog();
+  }
+
+  function renderChangelog() {
+    if (!elements.changelogSummary || !elements.changelogList || !CHANGELOG_ENTRIES.length) {
+      return;
+    }
+
+    const latest = CHANGELOG_ENTRIES[0];
+    const summaryFragment = document.createDocumentFragment();
+    summaryFragment.append(
+      buildChangelogSummaryCard(
+        latest.stage,
+        "Version " + APP_VERSION,
+        latest.headline,
+        latest.summary,
+        true
+      ),
+      buildChangelogSummaryCard(
+        "Best for",
+        "Who this update helps",
+        latest.audience,
+        "",
+        false
+      ),
+      buildChangelogSummaryCard(
+        "Release focus",
+        "Why this update exists",
+        latest.focus,
+        "",
+        false
+      )
+    );
+    elements.changelogSummary.replaceChildren(summaryFragment);
+
+    const listFragment = document.createDocumentFragment();
+    CHANGELOG_ENTRIES.forEach(function (entry) {
+      listFragment.append(buildChangelogEntry(entry));
+    });
+    elements.changelogList.replaceChildren(listFragment);
+  }
+
+  function buildChangelogSummaryCard(label, title, body, supportingText, isPrimary) {
+    const card = document.createElement("article");
+    card.className = "changelog-card" + (isPrimary ? " is-primary" : "");
+
+    const labelElement = document.createElement("p");
+    labelElement.className = "changelog-card-label";
+    labelElement.textContent = label;
+
+    const titleElement = document.createElement("h3");
+    titleElement.className = "changelog-card-title";
+    titleElement.textContent = title;
+
+    const bodyElement = document.createElement("p");
+    bodyElement.className = "changelog-card-body";
+    bodyElement.textContent = body;
+
+    card.append(labelElement, titleElement, bodyElement);
+
+    if (supportingText) {
+      const supportingElement = document.createElement("p");
+      supportingElement.className = "changelog-card-supporting";
+      supportingElement.textContent = supportingText;
+      card.append(supportingElement);
+    }
+
+    return card;
+  }
+
+  function buildChangelogEntry(entry) {
+    const article = document.createElement("article");
+    article.className = "changelog-entry";
+
+    const header = document.createElement("header");
+    header.className = "changelog-entry-header";
+
+    const headerCopy = document.createElement("div");
+    headerCopy.className = "changelog-entry-copy";
+
+    const versionLabel = document.createElement("p");
+    versionLabel.className = "changelog-entry-version";
+    versionLabel.textContent = "Version " + entry.version;
+
+    const headline = document.createElement("h3");
+    headline.className = "changelog-entry-title";
+    headline.textContent = entry.headline;
+
+    const date = document.createElement("p");
+    date.className = "changelog-entry-date";
+    date.textContent = entry.dateLabel;
+
+    headerCopy.append(versionLabel, headline, date);
+
+    const stage = document.createElement("span");
+    stage.className = "changelog-entry-stage";
+    stage.textContent = entry.stage;
+
+    header.append(headerCopy, stage);
+
+    const summary = document.createElement("p");
+    summary.className = "changelog-entry-summary";
+    summary.textContent = entry.summary;
+
+    const sections = document.createElement("div");
+    sections.className = "changelog-entry-sections";
+    sections.append(
+      buildChangelogListSection("What changed", entry.highlights),
+      buildChangelogListSection("Why it matters", entry.impact),
+      buildChangelogListSection("Good to know", entry.notes)
+    );
+
+    article.append(header, summary, sections);
+    return article;
+  }
+
+  function buildChangelogListSection(title, items) {
+    const section = document.createElement("section");
+    section.className = "changelog-entry-section";
+
+    const heading = document.createElement("h4");
+    heading.className = "changelog-entry-section-title";
+    heading.textContent = title;
+
+    const list = document.createElement("ul");
+    list.className = "changelog-points";
+
+    items.forEach(function (item) {
+      const listItem = document.createElement("li");
+      listItem.textContent = item;
+      list.append(listItem);
+    });
+
+    section.append(heading, list);
+    return section;
   }
 
   function isNumericLike(value) {
@@ -2242,6 +2670,7 @@
     state.autoReloadInterval = 1000;
     state.previewCopyContext = null;
     state.parsedCopyContext = null;
+    state.columnPickerSelectedIndexes = [];
     state.columnPickerSearch = "";
     state.columnPickerScrollTop = 0;
     state.restoreColumnPickerScroll = false;
@@ -2334,6 +2763,7 @@
     return typeof window.showOpenFilePicker === "function";
   }
 
+  initializeAppMeta();
   initializeTheme();
   resetViewer();
 })();

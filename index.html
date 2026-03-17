@@ -25,8 +25,12 @@
             </svg>
           </div>
           <div class="brand-text">
-            <p class="eyebrow">Excel Previewer</p>
+            <div class="brand-meta">
+              <p class="eyebrow">Excel Previewer</p>
+              <span id="app-version-badge" class="version-badge">v0.0.0</span>
+            </div>
             <h1 class="brand-title">Workbook inspection in the browser</h1>
+            <p class="brand-copy">Review spreadsheets locally, choose the right header row, and work with a cleaner parsed table without sending files to a server.</p>
           </div>
         </div>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">
@@ -109,6 +113,9 @@
         <button id="view-parsed-tab" class="view-tab is-active" type="button" data-view="parsed" aria-pressed="true">
           Parsed table
         </button>
+        <button id="view-changelog-tab" class="view-tab" type="button" data-view="changelog" aria-pressed="false">
+          What's new
+        </button>
       </section>
 
       <section id="preview-section" class="panel data-panel is-hidden">
@@ -147,8 +154,25 @@
         </div>
       </section>
 
+      <section id="changelog-section" class="panel data-panel is-hidden">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Changelog</p>
+            <h2>What changed in this version</h2>
+          </div>
+          <p id="changelog-meta" class="panel-meta">Plain-language release notes so anyone can understand what improved and why it matters.</p>
+        </div>
+
+        <div id="changelog-summary" class="changelog-summary"></div>
+        <div id="changelog-list" class="changelog-list"></div>
+      </section>
+
       <footer class="app-footer">
-        Copyright &copy; SEANG SENGLY
+        <span>Excel Previewer</span>
+        <span class="footer-separator" aria-hidden="true">•</span>
+        <span>Version <span id="footer-version">v0.0.0</span></span>
+        <span class="footer-separator" aria-hidden="true">•</span>
+        <span>Copyright &copy; SEANG SENGLY</span>
       </footer>
     </main>
   </div>
@@ -193,6 +217,11 @@
     </button>
 
     <div id="floating-settings-menu" class="floating-settings-menu is-hidden" role="menu" aria-label="Quick actions">
+      <button id="floating-changelog-button" class="floating-menu-item" type="button" role="menuitem">
+        <span class="floating-reload-title">View changelog</span>
+        <span id="floating-changelog-meta" class="floating-reload-meta">See what is new in this version</span>
+      </button>
+
       <button id="floating-columns-button" class="floating-menu-item" type="button" disabled role="menuitem">
         <span class="floating-reload-title">Manage columns</span>
         <span id="column-count" class="floating-reload-meta">0/10 selected</span>
