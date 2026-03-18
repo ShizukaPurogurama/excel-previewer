@@ -3,6 +3,7 @@
   const MAX_VISIBLE_COLUMNS = 10;
   const THEME_STORAGE_KEY = "excel-viewer-theme";
   const COLUMN_STORAGE_KEY = "excel-viewer-columns";
+  const MONEY_MAPPING_STORAGE_KEY = "excel-viewer-money-mappings";
   const CHANGELOG_ENTRIES = Object.freeze([
     Object.freeze({
       version: "1.3.0",
@@ -110,6 +111,13 @@
     columnsSearchInput: document.getElementById("columns-search-input"),
     columnsSearchMeta: document.getElementById("columns-search-meta"),
     resetColumnsButton: document.getElementById("reset-columns-button"),
+    autoDetectMoneyButton: document.getElementById("auto-detect-money-button"),
+    clearMoneyMappingButton: document.getElementById("clear-money-mapping-button"),
+    senderCurrencySelect: document.getElementById("sender-currency-select"),
+    senderAmountSelect: document.getElementById("sender-amount-select"),
+    receiverCurrencySelect: document.getElementById("receiver-currency-select"),
+    receiverAmountSelect: document.getElementById("receiver-amount-select"),
+    moneyMappingNote: document.getElementById("money-mapping-note"),
     floatingReloadButton: document.getElementById("floating-reload-button"),
     floatingReloadMeta: document.getElementById("floating-reload-meta"),
     themeToggle: document.getElementById("theme-toggle"),
@@ -151,6 +159,7 @@
     sheetMergeAnchors: new Map(),
     headerSelections: new Map(),
     columnSelections: new Map(),
+    moneyMappings: new Map(),
     reloadTimer: null,
     isAutoReloading: false,
     autoReloadInterval: 1000,
@@ -164,6 +173,7 @@
     restoreColumnPickerScroll: false,
     columnPickerFocusValue: "",
     restoreColumnPickerFocus: false,
+    columnPickerView: "list",
   };
 
   const copyFeedbackTimers = new WeakMap();
@@ -197,6 +207,12 @@
   elements.columnsSearchInput.addEventListener("input", handleColumnSearchInput);
   elements.columnsSearchInput.addEventListener("keydown", handleColumnSearchKeydown);
   elements.resetColumnsButton.addEventListener("click", handleResetColumns);
+  elements.autoDetectMoneyButton.addEventListener("click", handleAutoDetectMoneyMapping);
+  elements.clearMoneyMappingButton.addEventListener("click", handleClearMoneyMapping);
+  elements.senderCurrencySelect.addEventListener("change", handleMoneyMappingChange);
+  elements.senderAmountSelect.addEventListener("change", handleMoneyMappingChange);
+  elements.receiverCurrencySelect.addEventListener("change", handleMoneyMappingChange);
+  elements.receiverAmountSelect.addEventListener("change", handleMoneyMappingChange);
   elements.viewPreviewTab.addEventListener("click", handleViewTabClick);
   elements.viewParsedTab.addEventListener("click", handleViewTabClick);
   elements.viewChangelogTab.addEventListener("click", handleViewTabClick);
@@ -416,6 +432,9 @@
     const savedColumnSelections = preserveHeaderSelections
       ? new Map(state.columnSelections)
       : new Map();
+    const savedMoneyMappings = preserveHeaderSelections
+      ? new Map(state.moneyMappings)
+      : new Map();
 
     if (!options.isAutoReload) {
       setBusy(true);
@@ -442,6 +461,12 @@
       state.sheetMergedCells.clear();
       restoreHeaderSelections(savedHeaderSelections, workbook.SheetNames);
       restoreColumnSelections(savedColumnSelections, workbook.SheetNames);
+      state.moneyMappings.clear();
+      savedMoneyMappings.forEach(function (mapping, signature) {
+        if (signature && mapping) {
+          state.moneyMappings.set(signature, mapping);
+        }
+      });
 
       populateSheetSelect(workbook.SheetNames);
       renderSheet(
@@ -1021,6 +1046,7 @@
     if (!parsed.headers.length) {
       state.parsedCopyContext = null;
       syncColumnPicker([], []);
+      syncMoneyMappingControls([], null);
       elements.parsedMeta.textContent =
         "No columns could be derived from the chosen header row. " + mergeSummary;
       elements.parsedEmpty.textContent =
@@ -1043,6 +1069,7 @@
       ". " +
       mergeSummary;
 
+    syncMoneyMappingControls(parsed.headers, parsed.moneyMappingState);
     const selectedColumnIndexes = getSelectedColumnIndexesForCurrentSheet(parsed.headers);
     const selectedHeaders = selectedColumnIndexes.map(function (index) {
       return parsed.headers[index];
@@ -1129,7 +1156,7 @@
 
   function buildParsedTable(rows, headerIndex) {
     if (!rows.length) {
-      return { headers: [], records: [], mergedCarryRows: [] };
+      return { headers: [], records: [], mergedCarryRows: [], moneyMappingState: null };
     }
 
     const safeHeaderIndex = clampHeaderIndex(headerIndex, rows.length);
@@ -1144,7 +1171,7 @@
     );
 
     if (!maxColumnCount) {
-      return { headers: [], records: [], mergedCarryRows: [] };
+      return { headers: [], records: [], mergedCarryRows: [], moneyMappingState: null };
     }
 
     const activeColumns = [];
@@ -1161,14 +1188,15 @@
     }
 
     if (!activeColumns.length) {
-      return { headers: [], records: [], mergedCarryRows: [] };
+      return { headers: [], records: [], mergedCarryRows: [], moneyMappingState: null };
     }
 
     const seenHeaders = new Map();
     const headers = activeColumns.map(function (columnIndex) {
       return makeUniqueHeaderName(headerRow[columnIndex], columnIndex, seenHeaders);
     });
-    const amountCurrencyColumns = buildAmountCurrencyColumnLookup(headers);
+    const moneyMappingState = resolveMoneyMappingForHeaders(headers, dataRows);
+    const amountCurrencyColumns = buildAmountCurrencyColumnLookup(headers, moneyMappingState.mapping);
 
     const rowsWithMeta = dataRows.reduce(function (acc, row, dataRowIndex) {
       const hasData = activeColumns.some(function (columnIndex) {
@@ -1189,6 +1217,8 @@
             amountCurrencyColumns: amountCurrencyColumns,
             headers: headers,
             row: row,
+            sourceColumnIndex: columnIndex,
+            moneyMapping: moneyMappingState.mapping,
           });
         })
       );
@@ -1208,11 +1238,12 @@
       return acc;
     }, { records: [], mergedCarryRows: [], mergedAnchors: [] });
 
-    return { 
-      headers: headers, 
-      records: rowsWithMeta.records, 
+    return {
+      headers: headers,
+      records: rowsWithMeta.records,
       mergedCarryRows: rowsWithMeta.mergedCarryRows,
-      mergedAnchors: rowsWithMeta.mergedAnchors
+      mergedAnchors: rowsWithMeta.mergedAnchors,
+      moneyMappingState: moneyMappingState,
     };
   }
 
@@ -1391,6 +1422,504 @@
     state.restoreColumnPickerFocus = false;
     elements.openColumnsDialogButton.disabled = !state.workbook;
     elements.resetColumnsButton.disabled = !state.workbook;
+  }
+
+  function setColumnPickerView(view) {
+    state.columnPickerView = view === "grid" ? "grid" : "list";
+    elements.columnsOptions.dataset.view = state.columnPickerView;
+  }
+
+  function syncMoneyMappingControls(headers, mappingState) {
+    const activeHeaders = Array.isArray(headers) ? headers.slice() : [];
+    const mapping = mappingState && mappingState.mapping ? mappingState.mapping : null;
+    const source = mappingState && mappingState.source ? mappingState.source : "auto";
+    const countText = activeHeaders.length ? activeHeaders.length + " columns available" : "No columns available";
+
+    if (!activeHeaders.length) {
+      elements.senderCurrencySelect.innerHTML = "";
+      elements.senderAmountSelect.innerHTML = "";
+      elements.receiverCurrencySelect.innerHTML = "";
+      elements.receiverAmountSelect.innerHTML = "";
+      elements.autoDetectMoneyButton.disabled = true;
+      elements.clearMoneyMappingButton.disabled = true;
+      elements.senderCurrencySelect.disabled = true;
+      elements.senderAmountSelect.disabled = true;
+      elements.receiverCurrencySelect.disabled = true;
+      elements.receiverAmountSelect.disabled = true;
+      elements.moneyMappingNote.textContent = "Map sender and receiver amount columns to format money values.";
+      return;
+    }
+
+    const previousSenderCurrency = elements.senderCurrencySelect.value;
+    const previousSenderAmount = elements.senderAmountSelect.value;
+    const previousReceiverCurrency = elements.receiverCurrencySelect.value;
+    const previousReceiverAmount = elements.receiverAmountSelect.value;
+
+    const optionsHtml = buildMoneyMappingOptions(activeHeaders);
+    elements.senderCurrencySelect.innerHTML = optionsHtml;
+    elements.senderAmountSelect.innerHTML = optionsHtml;
+    elements.receiverCurrencySelect.innerHTML = optionsHtml;
+    elements.receiverAmountSelect.innerHTML = optionsHtml;
+
+    applyMoneyMappingValue(elements.senderCurrencySelect, mapping && mapping.senderCurrency);
+    applyMoneyMappingValue(elements.senderAmountSelect, mapping && mapping.senderAmount);
+    applyMoneyMappingValue(elements.receiverCurrencySelect, mapping && mapping.receiverCurrency);
+    applyMoneyMappingValue(elements.receiverAmountSelect, mapping && mapping.receiverAmount);
+
+    if (mappingState && mappingState.preserveCurrentValues) {
+      elements.senderCurrencySelect.value = previousSenderCurrency;
+      elements.senderAmountSelect.value = previousSenderAmount;
+      elements.receiverCurrencySelect.value = previousReceiverCurrency;
+      elements.receiverAmountSelect.value = previousReceiverAmount;
+    }
+
+    const hasAnyManualMapping =
+      Number.isInteger(mapping && mapping.senderCurrency) ||
+      Number.isInteger(mapping && mapping.senderAmount) ||
+      Number.isInteger(mapping && mapping.receiverCurrency) ||
+      Number.isInteger(mapping && mapping.receiverAmount);
+
+    elements.autoDetectMoneyButton.disabled = !state.workbook || !activeHeaders.length;
+    elements.clearMoneyMappingButton.disabled = !state.workbook || !hasAnyManualMapping;
+    elements.senderCurrencySelect.disabled = !state.workbook;
+    elements.senderAmountSelect.disabled = !state.workbook;
+    elements.receiverCurrencySelect.disabled = !state.workbook;
+    elements.receiverAmountSelect.disabled = !state.workbook;
+
+    if (source === "manual") {
+      elements.moneyMappingNote.textContent =
+        "Using your saved money mapping for this column set. " + countText + ".";
+    } else if (mapping && (mapping.senderAmount !== null || mapping.receiverAmount !== null)) {
+      elements.moneyMappingNote.textContent =
+        "Auto-detected money columns from the sheet. Adjust them if needed. " + countText + ".";
+    } else {
+      elements.moneyMappingNote.textContent =
+        "Map sender and receiver amount columns to format money values. " + countText + ".";
+    }
+  }
+
+  function buildMoneyMappingOptions(headers) {
+    const fragment = document.createDocumentFragment();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Not mapped";
+    fragment.append(placeholder);
+
+    headers.forEach(function (label, index) {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = toSpreadsheetColumn(index) + " - " + (label || "Column " + (index + 1));
+      fragment.append(option);
+    });
+
+    const wrapper = document.createElement("div");
+    wrapper.append(fragment);
+    return wrapper.innerHTML;
+  }
+
+  function applyMoneyMappingValue(select, index) {
+    select.value = Number.isInteger(index) && index >= 0 ? String(index) : "";
+  }
+
+  function handleMoneyMappingChange() {
+    if (!state.currentSheetName || !state.columnPickerHeaders.length) {
+      return;
+    }
+
+    const mapping = readMoneyMappingFromControls();
+    const signature = getHeaderSignature(state.columnPickerHeaders);
+
+    if (!signature) {
+      return;
+    }
+
+    if (hasAnyMoneyMapping(mapping)) {
+      state.moneyMappings.set(signature, mapping);
+      saveMoneyMappingToStorage(state.columnPickerHeaders, mapping);
+    } else {
+      state.moneyMappings.delete(signature);
+      removeMoneyMappingFromStorage(state.columnPickerHeaders);
+    }
+
+    renderSheet(state.currentSheetName);
+    showColumnsDialogNote(
+      hasAnyMoneyMapping(mapping)
+        ? "Saved money mapping for this column set."
+        : "Cleared the money mapping for this column set.",
+      hasAnyMoneyMapping(mapping) ? "success" : ""
+    );
+  }
+
+  function handleAutoDetectMoneyMapping() {
+    if (!state.currentSheetName || !state.columnPickerHeaders.length) {
+      return;
+    }
+
+    const rows = getRowsForSheet(state.currentSheetName);
+    const parsed = detectMoneyMapping(state.columnPickerHeaders, rows);
+    const signature = getHeaderSignature(state.columnPickerHeaders);
+
+    if (!signature) {
+      return;
+    }
+
+    state.moneyMappings.set(signature, parsed);
+    saveMoneyMappingToStorage(state.columnPickerHeaders, parsed);
+    renderSheet(state.currentSheetName);
+    showColumnsDialogNote("Applied auto-detected money mapping. Review it before continuing.", "success");
+  }
+
+  function handleClearMoneyMapping() {
+    if (!state.currentSheetName || !state.columnPickerHeaders.length) {
+      return;
+    }
+
+    const signature = getHeaderSignature(state.columnPickerHeaders);
+    if (!signature) {
+      return;
+    }
+
+    state.moneyMappings.delete(signature);
+    removeMoneyMappingFromStorage(state.columnPickerHeaders);
+    renderSheet(state.currentSheetName);
+    showColumnsDialogNote("Cleared saved money mapping. Auto-detection is active again.", "");
+  }
+
+  function readMoneyMappingFromControls() {
+    return normalizeMoneyMapping({
+      senderCurrency: parseMoneyMappingSelectValue(elements.senderCurrencySelect.value),
+      senderAmount: parseMoneyMappingSelectValue(elements.senderAmountSelect.value),
+      receiverCurrency: parseMoneyMappingSelectValue(elements.receiverCurrencySelect.value),
+      receiverAmount: parseMoneyMappingSelectValue(elements.receiverAmountSelect.value),
+      source: "manual",
+    }, state.columnPickerHeaders.length);
+  }
+
+  function parseMoneyMappingSelectValue(value) {
+    if (value === "" || value === null || value === undefined) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(String(value), 10);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  function hasAnyMoneyMapping(mapping) {
+    return Boolean(
+      mapping &&
+        (
+          Number.isInteger(mapping.senderCurrency) ||
+          Number.isInteger(mapping.senderAmount) ||
+          Number.isInteger(mapping.receiverCurrency) ||
+          Number.isInteger(mapping.receiverAmount)
+        )
+    );
+  }
+
+  function getMoneyMappingSignature(headers) {
+    return getHeaderSignature(headers);
+  }
+
+  function loadMoneyMappingFromStorage(headers) {
+    try {
+      const signature = getMoneyMappingSignature(headers);
+      if (!signature) {
+        return null;
+      }
+
+      const raw = window.localStorage.getItem(MONEY_MAPPING_STORAGE_KEY);
+      if (!raw) {
+        return null;
+      }
+
+      const data = JSON.parse(raw);
+      return normalizeMoneyMapping(data && data[signature], headers.length);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveMoneyMappingToStorage(headers, mapping) {
+    try {
+      const signature = getMoneyMappingSignature(headers);
+      if (!signature) {
+        return;
+      }
+
+      const raw = window.localStorage.getItem(MONEY_MAPPING_STORAGE_KEY);
+      const data = raw ? JSON.parse(raw) : {};
+      data[signature] = {
+        senderCurrency: Number.isInteger(mapping.senderCurrency) ? mapping.senderCurrency : null,
+        senderAmount: Number.isInteger(mapping.senderAmount) ? mapping.senderAmount : null,
+        receiverCurrency: Number.isInteger(mapping.receiverCurrency) ? mapping.receiverCurrency : null,
+        receiverAmount: Number.isInteger(mapping.receiverAmount) ? mapping.receiverAmount : null,
+      };
+      window.localStorage.setItem(MONEY_MAPPING_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      return;
+    }
+  }
+
+  function removeMoneyMappingFromStorage(headers) {
+    try {
+      const signature = getMoneyMappingSignature(headers);
+      if (!signature) {
+        return;
+      }
+
+      const raw = window.localStorage.getItem(MONEY_MAPPING_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+
+      const data = JSON.parse(raw);
+      delete data[signature];
+      window.localStorage.setItem(MONEY_MAPPING_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      return;
+    }
+  }
+
+  function normalizeMoneyMapping(mapping, totalColumns) {
+    const safeTotal = Number.isInteger(totalColumns) && totalColumns > 0 ? totalColumns : 0;
+    const normalized = {
+      senderCurrency: normalizeMoneyMappingIndex(mapping && mapping.senderCurrency, safeTotal),
+      senderAmount: normalizeMoneyMappingIndex(mapping && mapping.senderAmount, safeTotal),
+      receiverCurrency: normalizeMoneyMappingIndex(mapping && mapping.receiverCurrency, safeTotal),
+      receiverAmount: normalizeMoneyMappingIndex(mapping && mapping.receiverAmount, safeTotal),
+      detectedAmountColumns: Array.isArray(mapping && mapping.detectedAmountColumns)
+        ? mapping.detectedAmountColumns.filter(function (index) {
+            return Number.isInteger(index) && index >= 0 && (safeTotal === 0 || index < safeTotal);
+          })
+        : [],
+      detectedCurrencyColumns: Array.isArray(mapping && mapping.detectedCurrencyColumns)
+        ? mapping.detectedCurrencyColumns.filter(function (index) {
+            return Number.isInteger(index) && index >= 0 && (safeTotal === 0 || index < safeTotal);
+          })
+        : [],
+      source: mapping && mapping.source === "manual" ? "manual" : "auto",
+    };
+
+    return normalized;
+  }
+
+  function normalizeMoneyMappingIndex(value, totalColumns) {
+    if (!Number.isInteger(value) || value < 0) {
+      return null;
+    }
+
+    if (Number.isInteger(totalColumns) && totalColumns > 0 && value >= totalColumns) {
+      return null;
+    }
+
+    return value;
+  }
+
+  function resolveMoneyMappingForHeaders(headers, rows) {
+    const activeHeaders = Array.isArray(headers) ? headers.slice() : [];
+    const detected = detectMoneyMapping(activeHeaders, rows);
+    const signature = getMoneyMappingSignature(activeHeaders);
+    const stored = signature ? state.moneyMappings.get(signature) : null;
+    const saved = stored || loadMoneyMappingFromStorage(activeHeaders);
+
+    if (saved) {
+      return {
+        mapping: mergeMoneyMappings(detected, saved),
+        source: "manual",
+      };
+    }
+
+    return {
+      mapping: detected,
+      source: "auto",
+    };
+  }
+
+  function mergeMoneyMappings(baseMapping, overrideMapping) {
+    const base = normalizeMoneyMapping(baseMapping, 0);
+    const override = normalizeMoneyMapping(overrideMapping, 0);
+
+    return {
+      senderCurrency: override.senderCurrency !== null ? override.senderCurrency : base.senderCurrency,
+      senderAmount: override.senderAmount !== null ? override.senderAmount : base.senderAmount,
+      receiverCurrency: override.receiverCurrency !== null ? override.receiverCurrency : base.receiverCurrency,
+      receiverAmount: override.receiverAmount !== null ? override.receiverAmount : base.receiverAmount,
+      detectedAmountColumns: base.detectedAmountColumns,
+      detectedCurrencyColumns: base.detectedCurrencyColumns,
+      source: override.source === "manual" ? "manual" : base.source || "auto",
+    };
+  }
+
+  function detectMoneyMapping(headers, rows) {
+    const activeHeaders = Array.isArray(headers) ? headers : [];
+    const sampleRows = Array.isArray(rows) ? rows.slice(0, 40) : [];
+
+    const stats = activeHeaders.map(function (header, index) {
+      const values = sampleRows
+        .map(function (row) {
+          return row ? row[index] : null;
+        })
+        .filter(function (value) {
+          return !isEmptyCell(value);
+        });
+
+      const nonEmptyCount = values.length;
+      const numericLikeCount = values.filter(function (value) {
+        return parseCurrencyAmount(value) !== null || isNumericLike(value);
+      }).length;
+      const currencyCodeCount = values.filter(function (value) {
+        return Boolean(getSupportedCurrencyCode(value));
+      }).length;
+      const currencySymbolCount = values.filter(function (value) {
+        return hasCurrencySymbol(value);
+      }).length;
+      const headerText = normalizeHeaderLabel(header);
+      const side = getTransferSide(headerText);
+      const accountLikeHeader = isAccountLikeHeader(headerText);
+
+      return {
+        index: index,
+        amountScore:
+          scoreMoneyAmountHeader(headerText) +
+          (nonEmptyCount ? numericLikeCount / nonEmptyCount : 0) * 6 +
+          currencySymbolCount * 2 -
+          (accountLikeHeader ? 6 : 0),
+        currencyScore:
+          scoreMoneyCurrencyHeader(headerText) +
+          (nonEmptyCount ? currencyCodeCount / nonEmptyCount : 0) * 8 +
+          currencySymbolCount * 3 -
+          (accountLikeHeader ? 8 : 0),
+        side: side,
+      };
+    });
+
+    const amountCandidates = stats
+      .filter(function (item) {
+        return item.amountScore >= 2.2;
+      })
+      .sort(function (left, right) {
+        return right.amountScore - left.amountScore || left.index - right.index;
+      });
+    const currencyCandidates = stats
+      .filter(function (item) {
+        return item.currencyScore >= 2.2;
+      })
+      .sort(function (left, right) {
+        return right.currencyScore - left.currencyScore || left.index - right.index;
+      });
+
+    const detectedAmountColumns = amountCandidates.map(function (item) {
+      return item.index;
+    });
+    const detectedCurrencyColumns = currencyCandidates.map(function (item) {
+      return item.index;
+    });
+
+    const senderAmount = pickBestMoneyCandidate(amountCandidates, "sender", "amount", []);
+    const receiverAmount =
+      amountCandidates.length > 1
+        ? pickBestMoneyCandidate(
+            amountCandidates,
+            "receiver",
+            "amount",
+            senderAmount !== null ? [senderAmount] : []
+          )
+        : null;
+    const senderCurrency = pickBestMoneyCandidate(currencyCandidates, "sender", "currency", []);
+    const receiverCurrency = pickBestMoneyCandidate(
+      currencyCandidates,
+      "receiver",
+      "currency",
+      currencyCandidates.length > 1 && senderCurrency !== null ? [senderCurrency] : []
+    );
+
+    return normalizeMoneyMapping(
+      {
+        senderCurrency: senderCurrency,
+        senderAmount: senderAmount,
+        receiverCurrency: receiverCurrency,
+        receiverAmount: receiverAmount,
+        detectedAmountColumns: detectedAmountColumns,
+        detectedCurrencyColumns: detectedCurrencyColumns,
+        source: "auto",
+      },
+      activeHeaders.length
+    );
+  }
+
+  function pickBestMoneyCandidate(candidates, side, type, excludedIndexes) {
+    if (!Array.isArray(candidates) || !candidates.length) {
+      return null;
+    }
+
+    const exclusions = new Set(Array.isArray(excludedIndexes) ? excludedIndexes : []);
+    const scored = candidates
+      .map(function (candidate) {
+        const sideBonus = candidate.side === side ? 2.5 : candidate.side ? 0.5 : 0;
+        return {
+          index: candidate.index,
+          score: (type === "currency" ? candidate.currencyScore : candidate.amountScore) + sideBonus,
+        };
+      })
+      .filter(function (candidate) {
+        return !exclusions.has(candidate.index);
+      })
+      .sort(function (left, right) {
+        return right.score - left.score || left.index - right.index;
+      });
+
+    return scored.length ? scored[0].index : null;
+  }
+
+  function scoreMoneyAmountHeader(headerText) {
+    let score = 0;
+
+    if (/\b(amount|amt|value|total|net|gross|balance|debit|credit|fee|charge|payment|payout|settlement|principal|price|cost)\b/.test(headerText)) {
+      score += 4;
+    }
+
+    if (/\b(sender|receiver|recipient|beneficiary|payer|payee|from|to)\b/.test(headerText)) {
+      score += 1;
+    }
+
+    return score;
+  }
+
+  function scoreMoneyCurrencyHeader(headerText) {
+    let score = 0;
+
+    if (/\b(currency|curr|ccy|fx)\b/.test(headerText)) {
+      score += 5;
+    }
+
+    if (/\b(usd|khr)\b/.test(headerText)) {
+      score += 3;
+    }
+
+    return score;
+  }
+
+  function isAccountLikeHeader(headerText) {
+    return /\b(account|acct|iban|wallet|number|no|accountno|accountnumber|beneficiaryaccount|receiveraccount|senderaccount)\b/.test(
+      headerText
+    );
+  }
+
+  function getTransferSide(headerText) {
+    if (/\b(sender|from|source|debit|payer|origin)\b/.test(headerText)) {
+      return "sender";
+    }
+
+    if (/\b(receiver|to|destination|credit|beneficiary|recipient|payee)\b/.test(headerText)) {
+      return "receiver";
+    }
+
+    return "";
+  }
+
+  function hasCurrencySymbol(value) {
+    const text = normalizeCell(value);
+    return /[$៛]/.test(text);
   }
 
   function renderColumnPickerSurface(headers, selectedIndexes, options) {
@@ -2217,7 +2746,7 @@
     }
 
     const header = options.headers[options.activeHeaderIndex] || "";
-    if (!isAmountColumnHeader(header)) {
+    if (!isMoneyAmountColumn(options.activeHeaderIndex, header, options.moneyMapping)) {
       return null;
     }
 
@@ -2273,7 +2802,20 @@
   }
 
   function getSupportedCurrencyCode(value) {
-    const matches = normalizeCell(value).toUpperCase().match(/\b(?:USD|KHR)\b/);
+    const normalized = normalizeCell(value).toUpperCase();
+    const matches = normalized.match(/\b(?:USD|KHR)\b/);
+    if (matches && SUPPORTED_CURRENCY_CODES[matches[0]]) {
+      return matches[0];
+    }
+
+    if (normalized.indexOf("$") !== -1) {
+      return "USD";
+    }
+
+    if (normalized.indexOf("៛") !== -1) {
+      return "KHR";
+    }
+
     if (!matches || !SUPPORTED_CURRENCY_CODES[matches[0]]) {
       return "";
     }
@@ -2331,52 +2873,104 @@
     return currencyFormatterCache.get(cacheKey);
   }
 
-  function buildAmountCurrencyColumnLookup(headers) {
-    const currencyIndexes = headers.reduce(function (indexes, header, index) {
-      if (isCurrencyColumnHeader(header)) {
+  function buildAmountCurrencyColumnLookup(headers, moneyMapping) {
+    const safeHeaders = Array.isArray(headers) ? headers.slice() : [];
+    const mapping = normalizeMoneyMapping(moneyMapping, safeHeaders.length);
+    const currencyIndexes = safeHeaders.reduce(function (indexes, header, index) {
+      if (isMoneyCurrencyColumn(index, header, mapping)) {
         indexes.push(index);
       }
 
       return indexes;
     }, []);
-
-    const genericCurrencyIndex = currencyIndexes.find(function (index) {
-      return getHeaderSemanticBase(headers[index], "currency") === "";
+    const lookup = safeHeaders.map(function () {
+      return -1;
     });
+    const assignedAmountIndexes = new Set();
 
-    return headers.map(function (header) {
-      if (!isAmountColumnHeader(header)) {
+    function assignAmount(amountIndex, currencyIndex) {
+      if (!Number.isInteger(amountIndex) || amountIndex < 0 || amountIndex >= lookup.length) {
+        return;
+      }
+
+      lookup[amountIndex] = Number.isInteger(currencyIndex) ? currencyIndex : -1;
+      assignedAmountIndexes.add(amountIndex);
+    }
+
+    function nearestCurrencyIndex(amountIndex) {
+      if (!currencyIndexes.length) {
         return -1;
       }
 
-      const amountBase = getHeaderSemanticBase(header, "amount");
-      const matchedCurrencyIndex = currencyIndexes.find(function (index) {
-        return getHeaderSemanticBase(headers[index], "currency") === amountBase;
+      let bestIndex = currencyIndexes[0];
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      currencyIndexes.forEach(function (currencyIndex) {
+        const distance = Math.abs(currencyIndex - amountIndex);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestIndex = currencyIndex;
+        }
       });
 
-      if (matchedCurrencyIndex !== undefined) {
-        return matchedCurrencyIndex;
-      }
+      return bestIndex;
+    }
 
-      if (genericCurrencyIndex !== undefined) {
-        return genericCurrencyIndex;
+    [
+      [mapping.senderAmount, mapping.senderCurrency],
+      [mapping.receiverAmount, mapping.receiverCurrency],
+    ].forEach(function (pair) {
+      const amountIndex = pair[0];
+      const currencyIndex = pair[1];
+      if (Number.isInteger(amountIndex) && amountIndex >= 0) {
+        assignAmount(amountIndex, Number.isInteger(currencyIndex) ? currencyIndex : nearestCurrencyIndex(amountIndex));
       }
-
-      return currencyIndexes.length === 1 ? currencyIndexes[0] : -1;
     });
+
+    safeHeaders.forEach(function (header, index) {
+      if (assignedAmountIndexes.has(index) || !isMoneyAmountColumn(index, header, mapping)) {
+        return;
+      }
+
+      assignAmount(index, nearestCurrencyIndex(index));
+    });
+
+    return lookup;
   }
 
   function isAmountColumnHeader(header) {
-    return /\b(amount|amt)\b/.test(normalizeHeaderLabel(header));
+    return /\b(amount|amt|value|total|net|gross|balance|debit|credit|fee|charge|payment|payout|settlement|principal|price|cost)\b/.test(
+      normalizeHeaderLabel(header)
+    );
   }
 
   function isCurrencyColumnHeader(header) {
-    return /\b(currency|ccy|curr)\b/.test(normalizeHeaderLabel(header));
+    return /\b(currency|ccy|curr|fx)\b/.test(normalizeHeaderLabel(header));
+  }
+
+  function isMoneyAmountColumn(index, header, moneyMapping) {
+    const mapping = normalizeMoneyMapping(moneyMapping, 0);
+    return (
+      isAmountColumnHeader(header) ||
+      index === mapping.senderAmount ||
+      index === mapping.receiverAmount ||
+      (Array.isArray(mapping.detectedAmountColumns) && mapping.detectedAmountColumns.indexOf(index) !== -1)
+    );
+  }
+
+  function isMoneyCurrencyColumn(index, header, moneyMapping) {
+    const mapping = normalizeMoneyMapping(moneyMapping, 0);
+    return (
+      isCurrencyColumnHeader(header) ||
+      index === mapping.senderCurrency ||
+      index === mapping.receiverCurrency ||
+      (Array.isArray(mapping.detectedCurrencyColumns) && mapping.detectedCurrencyColumns.indexOf(index) !== -1)
+    );
   }
 
   function getHeaderSemanticBase(header, type) {
     const pattern =
-      type === "currency" ? /\b(currency|ccy|curr)\b/g : /\b(amount|amt)\b/g;
+      type === "currency" ? /\b(currency|ccy|curr|fx)\b/g : /\b(amount|amt|value|total|net|gross|balance|debit|credit|fee|charge|payment|payout|settlement|principal|price|cost)\b/g;
 
     return normalizeHeaderLabel(header).replace(pattern, " ").replace(/\s+/g, " ").trim();
   }
@@ -2651,6 +3245,18 @@
       isBusy || !state.workbook || !state.columnPickerHeaders.length;
     elements.resetColumnsButton.disabled =
       isBusy || !state.workbook || !state.columnPickerHeaders.length;
+    elements.autoDetectMoneyButton.disabled =
+      isBusy || !state.workbook || !state.columnPickerHeaders.length;
+    elements.clearMoneyMappingButton.disabled =
+      isBusy || !state.workbook || !state.columnPickerHeaders.length;
+    elements.senderCurrencySelect.disabled =
+      isBusy || !state.workbook || !state.columnPickerHeaders.length;
+    elements.senderAmountSelect.disabled =
+      isBusy || !state.workbook || !state.columnPickerHeaders.length;
+    elements.receiverCurrencySelect.disabled =
+      isBusy || !state.workbook || !state.columnPickerHeaders.length;
+    elements.receiverAmountSelect.disabled =
+      isBusy || !state.workbook || !state.columnPickerHeaders.length;
     updateFloatingReloadButtonState(isBusy);
   }
 
@@ -2665,6 +3271,7 @@
     state.sheetMergeAnchors.clear();
     state.headerSelections.clear();
     state.columnSelections.clear();
+    state.moneyMappings.clear();
     stopAutoReload();
     state.isAutoReloading = false;
     state.autoReloadInterval = 1000;
@@ -2676,6 +3283,7 @@
     state.restoreColumnPickerScroll = false;
     state.columnPickerFocusValue = "";
     state.restoreColumnPickerFocus = false;
+    state.columnPickerView = "list";
 
     elements.sheetSelect.innerHTML = '<option value="">Upload a workbook first</option>';
     elements.sheetSelect.disabled = true;
@@ -2694,6 +3302,17 @@
     elements.columnsDialogCount.textContent = "0/" + MAX_VISIBLE_COLUMNS + " selected";
     elements.resetColumnsButton.disabled = true;
     elements.openColumnsDialogButton.disabled = true;
+    elements.autoDetectMoneyButton.disabled = true;
+    elements.clearMoneyMappingButton.disabled = true;
+    elements.senderCurrencySelect.disabled = true;
+    elements.senderAmountSelect.disabled = true;
+    elements.receiverCurrencySelect.disabled = true;
+    elements.receiverAmountSelect.disabled = true;
+    elements.senderCurrencySelect.innerHTML = "";
+    elements.senderAmountSelect.innerHTML = "";
+    elements.receiverCurrencySelect.innerHTML = "";
+    elements.receiverAmountSelect.innerHTML = "";
+    elements.moneyMappingNote.textContent = "Map sender and receiver amount columns to format money values.";
     showColumnsDialogNote("Search the list below and select up to " + MAX_VISIBLE_COLUMNS + " columns.", "");
 
     elements.previewTable.innerHTML = "";

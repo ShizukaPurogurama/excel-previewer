@@ -195,6 +195,42 @@
         <button id="reset-columns-button" class="ghost-button" type="button" disabled>Reset defaults</button>
       </div>
 
+      <section class="columns-search-panel money-mapping-panel">
+        <div class="money-mapping-header">
+          <div>
+            <p class="section-label">Money mapping</p>
+            <h3>Map sender and receiver money columns</h3>
+          </div>
+          <div class="money-mapping-actions">
+            <button id="auto-detect-money-button" class="ghost-button" type="button" disabled>Auto-detect</button>
+            <button id="clear-money-mapping-button" class="ghost-button" type="button" disabled>Clear</button>
+          </div>
+        </div>
+
+        <p id="money-mapping-note" class="dialog-note">
+          Map sender and receiver amount columns to format money values.
+        </p>
+
+        <div class="money-mapping-grid">
+          <label class="money-mapping-field" for="sender-currency-select">
+            <span>Sender currency</span>
+            <select id="sender-currency-select" class="money-mapping-select" disabled></select>
+          </label>
+          <label class="money-mapping-field" for="sender-amount-select">
+            <span>Sender amount</span>
+            <select id="sender-amount-select" class="money-mapping-select" disabled></select>
+          </label>
+          <label class="money-mapping-field" for="receiver-currency-select">
+            <span>Receiver currency</span>
+            <select id="receiver-currency-select" class="money-mapping-select" disabled></select>
+          </label>
+          <label class="money-mapping-field" for="receiver-amount-select">
+            <span>Receiver amount</span>
+            <select id="receiver-amount-select" class="money-mapping-select" disabled></select>
+          </label>
+        </div>
+      </section>
+
       <p id="columns-dialog-note" class="dialog-note">Search the list below and select up to 10 columns for the parsed table.</p>
       <label class="columns-search-field" for="columns-search-input">
         <span class="columns-search-label">Search columns</span>
