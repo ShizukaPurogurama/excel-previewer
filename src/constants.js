@@ -6,9 +6,36 @@ export const MONEY_MAPPING_STORAGE_KEY = 'excel-viewer-money-mappings';
 
 export const CHANGELOG_ENTRIES = Object.freeze([
   Object.freeze({
+    version: '1.4.0',
+    dateLabel: 'April 18, 2026',
+    stage: 'Current release',
+    headline:
+      'Rebuilt on a modern frontend so the app feels snappier and is easier to improve.',
+    summary:
+      'The previewer has been rebuilt on a modern React foundation. Everything you used before works the same way, but the interface responds a little faster and the code is ready for the next round of improvements.',
+    audience:
+      'Everyone who uses the previewer day-to-day — operations, finance, QA, and support.',
+    focus:
+      'A quieter update under the hood: same features, smoother feel, cleaner base for future releases.',
+    highlights: [
+      'Refreshed app foundation using React and Vite for faster interactions and startup.',
+      'Column picker, money mapping, preview, parsed table, and reload flow all work exactly as before.',
+      'Deployment now ships a minified bundle, so the site loads with fewer requests.',
+    ],
+    impact: [
+      'Switching sheets, toggling columns, and opening the column picker feel more responsive.',
+      'Nothing you relied on has moved — saved column choices and money mappings carry over automatically.',
+      'Future updates (new tools, new currencies, better merge handling) are quicker to ship from here.',
+    ],
+    notes: [
+      'No change to how files are handled: workbooks stay local in your browser and are never uploaded.',
+      'If the page looks outdated after the update, a hard refresh (Ctrl+Shift+R) clears the old cached files.',
+    ],
+  }),
+  Object.freeze({
     version: '1.3.0',
     dateLabel: 'March 17, 2026',
-    stage: 'Current release',
+    stage: 'Previous release',
     headline:
       "Cleaner money display, steadier column scrolling, and a built-in update page.",
     summary:
