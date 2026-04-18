@@ -1,53 +1,61 @@
 # Excel Previewer
 
-A lightweight browser-based Excel viewer for inspecting worksheets, selecting header rows, and parsing table data — all without a backend.
+[![Vite](https://img.shields.io/badge/Vite-5.0+-645FFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/Deployed-GitHub%20Pages-blue.svg)](https://github.com/pages)
 
-## Features
+A lightweight, client-side Excel viewer for inspecting worksheets, selecting header rows, and parsing table data — no backend required.
 
-- Load `.xlsx`, `.xls`, `.xlsb`, `.ods`, `.csv`
-- Sheet switching
-- Header-row selection (auto-detected, manually overridable)
-- Parsed table view with currency-aware money formatting (USD, KHR)
-- Column visibility control (up to 10 columns) with search
-- Manual and auto-reload modes (via File System Access API when available)
-- Merged-cell awareness in preview and parsed views
-- Click-to-copy for cells and entire columns (Excel-compatible HTML)
-- Theme toggle (light/dark) that follows OS preference by default
-- Floating quick-actions (changelog, columns, reload)
+## Quick overview
 
-## Local development
+- **File types:** `.xlsx`, `.xls`, `.xlsb`, `.ods`, `.csv`
+- **Highlights:** sheet switching, header-row selection (auto/manual), merged-cell aware preview, parsed table view with currency-aware formatting (USD, KHR), column visibility and search, click-to-copy, and theme toggle (light/dark).
 
-This project is now a Vite + React app.
+## Preview
+
+![Excel Previewer Demo](./assets/demo.gif)
+
+**Features in action:** drag a spreadsheet file, inspect sheets side-by-side, auto-detect or manually pick header rows, and export parsed tables with click-to-copy cells and columns.
+
+## Quick start
+
+1. Install dependencies:
 
 ```bash
 npm install
+```
+
+2. Run development server (Vite):
+
+```bash
 npm run dev
 ```
 
 The dev server prints a local URL (default `http://localhost:5173/excel-previewer/`).
 
-## Production build
+3. Build for production:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-`npm run build` emits a static bundle into `dist/` that can be served from any static host.
+`npm run build` emits a static bundle into `dist/` that can be hosted on any static host.
 
-## Deployment (GitHub Pages)
+## Usage notes
 
-The `base` in [vite.config.js](vite.config.js) is set to `/excel-previewer/` so that asset URLs resolve under the GitHub Pages project path.
+- When available the File System Access API enables auto-reload while editing files.
+- Click any cell to copy as plain text, or click a column header to copy column HTML compatible with Excel.
+- Parsed table view detects and formats currency values; configure currency presets in `src/constants.js`.
 
-Pushes to `main` are built and deployed by
-[.github/workflows/pages-build-deployment.yml](.github/workflows/pages-build-deployment.yml):
+## Deployment
 
-1. Install dependencies.
-2. Run `npm run build`.
-3. Upload `dist/` as the Pages artifact.
-4. Publish with `actions/deploy-pages`.
+This repo is configured for GitHub Pages. The `base` option in [vite.config.js](vite.config.js) is set to `/excel-previewer/` so assets resolve under the project path.
 
-If you fork this repo under a different name, update `base` in `vite.config.js` to match.
+Pushes to `main` are deployed via the workflow at [.github/workflows/pages-build-deployment.yml](.github/workflows/pages-build-deployment.yml): install dependencies, run `npm run build`, upload `dist/`, then publish.
+
+If you fork the project, update `base` in [vite.config.js](vite.config.js) to match your Pages path.
 
 ## Project layout
 
@@ -64,10 +72,16 @@ src/
 
 ## Tech stack
 
-- [Vite](https://vitejs.dev/) + [React 18](https://react.dev/)
-- [SheetJS](https://sheetjs.com/) (`xlsx`) for workbook parsing
-- Native `<dialog>`, File System Access API, Clipboard API
+- Vite + React 18
+- SheetJS (`xlsx`) for workbook parsing
+- Native browser APIs: File System Access, Clipboard, `<dialog>`
 
-## Copyright
+## Contributing
+
+Contributions are welcome. Please open issues for bugs or feature requests and submit pull requests for fixes.
+
+## License & author
 
 Copyright (c) SEANG SENGLY
+
+Licensed under the terms in this repository.

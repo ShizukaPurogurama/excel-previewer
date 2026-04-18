@@ -8,6 +8,7 @@ export default defineConfig({
     // Target modern browsers — enables smaller output than the default 'modules'
     // baseline and avoids unnecessary legacy transforms.
     target: 'es2020',
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks: (id) => {
@@ -22,6 +23,9 @@ export default defineConfig({
           }
           // xlsx stays in the lazy tool chunk automatically (it's only imported
           // inside the excel-previewer tool which is React.lazy'd). No rule needed.
+          // xlsx-js-style (hyperlink generator) is large — its own vendor chunk
+          // so it doesn't inflate the tool component chunk.
+          if (id.includes('node_modules/xlsx-js-style')) return 'vendor-xlsx-style';
         },
       },
     },

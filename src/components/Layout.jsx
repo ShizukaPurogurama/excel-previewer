@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
+import Footer from './Footer.jsx';
 
 const SIDEBAR_KEY = 'toolsuite-sidebar-collapsed';
 
@@ -51,6 +52,7 @@ export default function Layout({ children, theme, onToggleTheme }) {
           sidebarCollapsed={sidebarCollapsed}
         />
         <main className="tool-content">{children}</main>
+        <Footer />
       </div>
     </div>
   );

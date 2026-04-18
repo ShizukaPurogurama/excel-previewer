@@ -11,6 +11,15 @@ export const TOOLS = [
     component: lazy(() => import('./excel-previewer/index.jsx')),
   },
   {
+    id: 'hyperlink-generator',
+    name: 'Hyperlink Generator',
+    description:
+      'Bulk-generate Excel =HYPERLINK() formulas from a column of values. Pick a source column, set a base path, and download the result.',
+    icon: '🔗',
+    path: '/tools/hyperlink-generator',
+    component: lazy(() => import('./hyperlink-generator/index.jsx')),
+  },
+  {
     id: 'coming-soon',
     name: 'More tools coming',
     description: 'New browser-based tools will appear here as they are added.',
