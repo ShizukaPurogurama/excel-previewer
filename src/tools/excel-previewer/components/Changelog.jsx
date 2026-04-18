@@ -1,4 +1,4 @@
-import { APP_VERSION, CHANGELOG_ENTRIES } from '../constants.js';
+import { APP_VERSION, CHANGELOG_ENTRIES } from '../../../constants.js';
 
 function SummaryCard({ label, title, body, supportingText, isPrimary }) {
   return (

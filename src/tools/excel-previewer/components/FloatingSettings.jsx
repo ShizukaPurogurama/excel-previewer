@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { APP_VERSION } from '../constants.js';
+import { APP_VERSION } from '../../../constants.js';
 import { formatInterval } from '../utils/columns.js';
 
 function resolveReloadMeta({ hasWorkbook, isBusy, reloadMode, reloadInterval, fileHandle, supportsFSA }) {

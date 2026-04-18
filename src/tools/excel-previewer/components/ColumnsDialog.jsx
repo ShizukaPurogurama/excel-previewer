@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MAX_VISIBLE_COLUMNS } from '../constants.js';
+import { MAX_VISIBLE_COLUMNS } from '../../../constants.js';
 import { normalizeColumnPickerSearch, toSpreadsheetColumn } from '../utils/columns.js';
 import { hasAnyMoneyMapping } from '../utils/money.js';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js';

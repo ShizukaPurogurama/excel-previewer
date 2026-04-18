@@ -1,4 +1,4 @@
-import { APP_VERSION } from '../constants.js';
+import { APP_VERSION } from '../../../constants.js';
 
 export default function Topbar({ theme, onToggleTheme }) {
   const isDark = theme === 'dark';

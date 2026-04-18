@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import { PREVIEW_ROW_LIMIT } from '../constants.js';
+import { PREVIEW_ROW_LIMIT } from '../../../constants.js';
 import { formatCellValue, toSpreadsheetColumn } from '../utils/columns.js';
 import { useCellCopy } from '../hooks/useCellCopy.js';
 

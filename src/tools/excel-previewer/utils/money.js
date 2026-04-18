@@ -5,7 +5,7 @@ import {
   normalizeCell,
   normalizeHeaderLabel,
 } from './columns.js';
-import { MONEY_MAPPING_STORAGE_KEY, SUPPORTED_CURRENCY_CODES } from '../constants.js';
+import { MONEY_MAPPING_STORAGE_KEY, SUPPORTED_CURRENCY_CODES } from '../../../constants.js';
 
 const currencyFormatterCache = new Map();
 

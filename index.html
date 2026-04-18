@@ -3,14 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Excel Previewer — Browser-side workbook inspection</title>
-  <meta name="description" content="Upload an Excel, CSV or ODS workbook and inspect it entirely in your browser. No backend, no data leaves your device. Auto-detects header rows and lets you pick which columns to display.">
-  <meta property="og:title" content="Excel Previewer">
-  <meta property="og:description" content="Preview and parse Excel, CSV and ODS files directly in the browser. Zero server, instant results.">
+  <title>Tool Suite — Browser-based tools</title>
+  <meta name="description" content="Lightweight browser-based tools. No account, no upload, no backend — your data stays on your device.">
+  <meta property="og:title" content="Tool Suite">
+  <meta property="og:description" content="Browser-based tools: Excel previewer, and more. Zero server, instant results.">
   <meta property="og:type" content="website">
+
+  <!--
+    Preconnect to Google Font servers so TCP + TLS is negotiated
+    before the font stylesheet request fires.
+    Without this, those handshakes can't start until the browser
+    parses the stylesheet — adding one extra serial round-trip.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!--
+    Font stylesheet as a <link> directly in HTML, not a CSS @import.
+    An @import inside a .css file is discovered late (only after the
+    browser downloads and parses the CSS), adding 1–2 serial round-trips
+    before fonts can even begin downloading.
+    Placing it here lets the browser start the font request in parallel
+    with the JS and CSS downloads.
+
+    Weights reduced: Manrope 400,600,700,800 (500 dropped — renders as 600),
+    IBM Plex Mono 400 only (500 was unused). Saves ~1–2 font file downloads.
+  -->
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400&display=swap"
+  >
+
+  <!--
+    Inline skeleton styles — gives the browser something to paint before
+    the React bundle executes. Replaced by real content when JS mounts.
+    Uses CSS variables so it automatically respects the OS color scheme.
+  -->
+  <style>
+    :root { --sk-bg: #dfe5ef; --sk-surface: rgba(238,243,250,0.92); --sk-line: rgba(0,0,0,0.08); }
+    @media (prefers-color-scheme: dark) {
+      :root { --sk-bg: #08080c; --sk-surface: rgba(18,18,26,0.80); --sk-line: rgba(255,255,255,0.06); }
+    }
+    html[data-theme="dark"] { --sk-bg: #08080c; --sk-surface: rgba(18,18,26,0.80); --sk-line: rgba(255,255,255,0.06); }
+
+    body { margin: 0; background: var(--sk-bg); }
+
+    .preload-frame {
+      display: flex;
+      min-height: 100vh;
+    }
+    .preload-sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--sk-surface);
+      border-right: 1px solid var(--sk-line);
+    }
+    .preload-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .preload-header {
+      height: 52px;
+      background: var(--sk-surface);
+      border-bottom: 1px solid var(--sk-line);
+    }
+    @media (max-width: 768px) {
+      .preload-sidebar { display: none; }
+    }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- Skeleton visible while JS downloads and React mounts -->
+    <div class="preload-frame" aria-hidden="true">
+      <div class="preload-sidebar"></div>
+      <div class="preload-main">
+        <div class="preload-header"></div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import {
   COLUMN_STORAGE_KEY,
   FILE_PICKER_OPTIONS,
   MAX_VISIBLE_COLUMNS,
-} from '../constants.js';
+} from '../../../constants.js';
 import { clampHeaderIndex, getHeaderSignature } from '../utils/columns.js';
 import { detectHeaderRow } from '../utils/headerDetection.js';
 import {

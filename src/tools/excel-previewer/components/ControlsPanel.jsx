@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FILE_INPUT_ACCEPT, RELOAD_INTERVAL_OPTIONS } from '../constants.js';
+import { FILE_INPUT_ACCEPT, RELOAD_INTERVAL_OPTIONS } from '../../../constants.js';
 
 export default function ControlsPanel({
   hasWorkbook,
