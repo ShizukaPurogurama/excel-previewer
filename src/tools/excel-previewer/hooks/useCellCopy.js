@@ -1,3 +1,4 @@
+// Kept: click-to-copy for cells and entire columns, with flash feedback — wires clipboard utils to table click events.
 import { useCallback, useRef } from 'react';
 import {
   buildClipboardTableHtml,

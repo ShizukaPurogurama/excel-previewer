@@ -1,3 +1,4 @@
+// Kept: toast queue with auto-dismiss — pure state, no UI rendering.
 import { useCallback, useRef, useState } from 'react';
 
 export function useToasts() {
