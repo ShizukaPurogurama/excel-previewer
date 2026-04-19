@@ -20,6 +20,15 @@ export const TOOLS = [
     component: lazy(() => import('./hyperlink-generator/index.jsx')),
   },
   {
+    id: 'conditional-formula-filler',
+    name: 'Conditional Formula Filler',
+    description:
+      'Fill cells based on multi-column IF/AND conditions without writing formulas. Define lookup values, set condition rules, pick target columns, and export a filled workbook.',
+    icon: '🔀',
+    path: '/tools/conditional-formula-filler',
+    component: lazy(() => import('./conditional-formula-filler/index.jsx')),
+  },
+  {
     id: 'coming-soon',
     name: 'More tools coming',
     description: 'New browser-based tools will appear here as they are added.',
