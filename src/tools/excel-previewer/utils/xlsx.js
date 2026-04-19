@@ -1,3 +1,4 @@
+// Kept: pure workbook I/O and merge-cell math — no UI dependencies.
 import * as XLSX from 'xlsx';
 
 export async function readWorkbookFromFile(file) {

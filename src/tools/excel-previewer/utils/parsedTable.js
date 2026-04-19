@@ -1,3 +1,4 @@
+// Kept: builds the parsed-table data structure and handles column-selection persistence — no UI.
 import {
   clampHeaderIndex,
   formatCellValue,

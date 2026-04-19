@@ -1,3 +1,4 @@
+// Kept: currency detection, amount formatting, and money-mapping persistence — no UI.
 import {
   getHeaderSignature,
   isEmptyCell,

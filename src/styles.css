@@ -418,12 +418,9 @@ input[type="number"]:focus-visible {
 .stat-label,
 .field-label {
   margin: 0;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0.75;
+  font-size: 0.79rem;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .hero-card h2,
@@ -668,8 +665,6 @@ option {
 
 .ghost-button:hover:not(:disabled) {
   border-color: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--accent-glow);
 }
 
 .ghost-button.is-active {
@@ -736,37 +731,26 @@ option {
 
 .dialog-note {
   margin: 0;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  background: var(--surface-soft);
+  font-size: 0.8rem;
   color: var(--muted);
-  font-size: 0.88rem;
   line-height: 1.4;
 }
 
 .dialog-note.is-error {
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 22%, transparent);
-  background: var(--danger-soft);
 }
 
 .dialog-note.is-success {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 22%, transparent);
-  background: var(--success-soft);
 }
 
 .columns-search-panel {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 45%, transparent), transparent 72%),
-    var(--surface-soft);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--line-strong) 32%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
 }
 
 .money-mapping-panel {
@@ -807,21 +791,24 @@ option {
 }
 
 .money-mapping-field span {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.79rem;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .money-mapping-select {
   width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
+  height: 32px;
+  min-height: unset;
+  padding: 0 8px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--surface-elevated);
   color: var(--text);
-  font-size: 0.92rem;
+  font: inherit;
+  font-size: 0.84rem;
+  outline: none;
+  transition: border-color 120ms;
 }
 
 .money-mapping-select:focus {
@@ -836,33 +823,32 @@ option {
 }
 
 .columns-search-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.79rem;
+  font-weight: 500;
   color: var(--muted);
 }
 
 .columns-search-input {
   width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
+  height: 32px;
+  min-height: unset;
+  padding: 0 10px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--surface-elevated);
   color: var(--text);
-  font-size: 0.94rem;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  font: inherit;
+  font-size: 0.88rem;
+  transition: border-color 120ms;
 }
 
 .columns-search-input::placeholder {
-  color: color-mix(in srgb, var(--muted) 78%, transparent);
+  color: color-mix(in srgb, var(--muted) 65%, transparent);
 }
 
 .columns-search-input:focus {
   outline: none;
   border-color: var(--accent);
-  background: var(--surface-elevated);
 }
 
 .columns-search-actions {
@@ -970,11 +956,11 @@ option {
   scrollbar-width: none;
   overscroll-behavior: contain;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  padding: 10px;
+  border-radius: var(--radius-md);
+  padding: 6px;
   background: var(--surface-soft);
   display: grid;
-  gap: 8px;
+  gap: 3px;
 }
 
 .columns-options::-webkit-scrollbar {
@@ -1000,44 +986,40 @@ option {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface-elevated);
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
   cursor: pointer;
   line-height: 1.35;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: background-color 100ms, border-color 100ms;
 }
 
 .columns-option:hover {
-  border-color: var(--accent);
+  background: var(--surface-elevated);
+  border-color: var(--line);
 }
 
 .columns-option.is-selected {
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
-  background: color-mix(in srgb, var(--accent-soft) 18%, var(--surface-elevated));
+  background: var(--surface-elevated);
+  border-color: var(--line);
 }
 
 .columns-option input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--accent);
+  flex-shrink: 0;
 }
 
 .columns-option-key {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  min-height: 28px;
-  padding: 4px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-soft) 52%, transparent);
-  color: var(--accent);
   font-family: "IBM Plex Mono", monospace;
-  font-size: 0.77rem;
-  font-weight: 700;
+  font-size: 0.71rem;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 18px;
+  text-align: center;
 }
 
 .columns-option-name {
@@ -1045,7 +1027,8 @@ option {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 500;
   color: var(--text);
 }
 

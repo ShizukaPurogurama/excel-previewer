@@ -1,3 +1,4 @@
+// Kept: clipboard write helpers (plain text + HTML) and HYPERLINK formula parser — no UI.
 export function escapeHtml(text) {
   return String(text)
     .replace(/&/g, '&amp;')

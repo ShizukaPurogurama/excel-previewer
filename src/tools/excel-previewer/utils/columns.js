@@ -1,3 +1,4 @@
+// Kept: pure cell-formatting, header-naming, and search-normalization utilities — no UI.
 export function toSpreadsheetColumn(index) {
   let label = '';
   let value = index + 1;

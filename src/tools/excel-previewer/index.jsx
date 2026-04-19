@@ -1,25 +1,28 @@
-import { useCallback, useState } from 'react';
-import { MAX_VISIBLE_COLUMNS } from '../../constants.js';
+import { useCallback, useRef, useState } from 'react';
+import { FILE_INPUT_ACCEPT } from '../../constants.js';
 import { useToasts } from './hooks/useToasts.js';
 import { useWorkbook } from './hooks/useWorkbook.js';
-import ControlsPanel from './components/ControlsPanel.jsx';
-import StatusNote from './components/StatusNote.jsx';
-import StatsGrid from './components/StatsGrid.jsx';
-import ViewSwitcher from './components/ViewSwitcher.jsx';
-import PreviewTable from './components/PreviewTable.jsx';
-import ParsedTable from './components/ParsedTable.jsx';
-import Changelog from './components/Changelog.jsx';
-import FloatingSettings from './components/FloatingSettings.jsx';
-import ColumnsDialog from './components/ColumnsDialog.jsx';
-import ToastContainer from './components/ToastContainer.jsx';
+import './previewer.css';
+
+import ChangelogPanel from './components/ChangelogPanel.jsx';
+import ColumnManager from './components/ColumnManager.jsx';
+import DataTable from './components/DataTable.jsx';
+import DropZone from './components/DropZone.jsx';
+import FloatingFab from './components/FloatingFab.jsx';
+import RawTable from './components/RawTable.jsx';
+import StatusStrip from './components/StatusStrip.jsx';
+import Toast from './components/Toast.jsx';
+import Toolbar from './components/Toolbar.jsx';
 
 export default function ExcelPreviewerTool() {
-  const { toasts, showToast } = useToasts();
-
+  const [activeView, setActiveView] = useState('parsed');
+  const [isColumnsOpen, setIsColumnsOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Upload a workbook to begin.');
   const [statusTone, setStatusTone] = useState('');
-  const [activeView, setActiveView] = useState('parsed');
-  const [isColumnsDialogOpen, setIsColumnsDialogOpen] = useState(false);
+
+  const fileInputRef = useRef(null);
+  const { toasts, showToast } = useToasts();
 
   const showStatus = useCallback(
     (message, tone, hideToast) => {
@@ -32,82 +35,128 @@ export default function ExcelPreviewerTool() {
   );
 
   const workbook = useWorkbook({ showStatus });
-
+  const { handleFileInputChange, handleFileInputClick } = workbook;
   const hasWorkbook = Boolean(workbook.workbook);
-  const recordCount = workbook.parsedTable.records.length;
-  const headerRowLabel = workbook.rows.length ? 'Row ' + (workbook.headerIndex + 1) : '-';
 
-  const handleApplyMoneyMapping = (mapping) => workbook.applyMoneyMapping(mapping);
+  const triggerFileInput = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // Accepted by handleFileInputChange which only reads event.target.files[0]
+  const handleDroppedFile = useCallback(
+    (file) => {
+      handleFileInputChange({ target: { files: [file] } });
+    },
+    [handleFileInputChange]
+  );
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleDroppedFile(file);
+    },
+    [handleDroppedFile]
+  );
+
+  const handleOpenColumns = useCallback(() => {
+    if (hasWorkbook && workbook.parsedTable.headers.length) {
+      setIsColumnsOpen(true);
+    }
+  }, [hasWorkbook, workbook.parsedTable.headers.length]);
+
+  const isStatusRelevant =
+    statusMessage && statusMessage !== 'Upload a workbook to begin.';
 
   return (
-    <>
-      <div className="app-shell">
-        <ControlsPanel
-          hasWorkbook={hasWorkbook}
-          isBusy={workbook.isBusy}
-          fileName={workbook.fileName}
-          sheetNames={workbook.sheetNames}
-          currentSheetName={workbook.currentSheetName}
-          headerIndex={workbook.headerIndex}
-          reloadMode={workbook.reloadMode}
-          reloadInterval={workbook.reloadInterval}
-          onFileInputClick={workbook.handleFileInputClick}
-          onFileInputChange={workbook.handleFileInputChange}
-          onSheetChange={workbook.selectSheet}
-          onApplyHeaderRow={workbook.applyManualHeaderRow}
-          onReloadModeChange={workbook.setReloadMode}
-          onReloadIntervalChange={workbook.setReloadInterval}
-        />
-
-        <StatusNote message={statusMessage} tone={statusTone} />
-
-        <StatsGrid
-          fileName={workbook.fileName}
-          sheetName={workbook.currentSheetName}
-          headerRowLabel={headerRowLabel}
-          recordCount={recordCount}
-        />
-
-        <ViewSwitcher activeView={activeView} onChange={setActiveView} />
-
-        <PreviewTable
-          isVisible={activeView === 'preview'}
-          rows={workbook.rows}
-          headerIndex={workbook.headerIndex}
-          mergedCovered={workbook.mergedCovered}
-          mergeAnchors={workbook.mergeAnchors}
-          mergeSummary={workbook.mergeSummary}
-          onSelectHeaderRow={workbook.applyHeaderIndex}
-          showStatus={showStatus}
-        />
-
-        <ParsedTable
-          isVisible={activeView === 'parsed'}
-          parsedTable={workbook.parsedTable}
-          selectedColumnIndexes={workbook.selectedColumnIndexes}
-          headerIndex={workbook.headerIndex}
-          mergeSummary={workbook.mergeSummary}
-          showStatus={showStatus}
-        />
-
-        <Changelog isVisible={activeView === 'changelog'} />
-      </div>
-
-      <ColumnsDialog
-        isOpen={isColumnsDialogOpen}
-        onClose={() => setIsColumnsDialogOpen(false)}
-        hasWorkbook={hasWorkbook}
-        headers={workbook.parsedTable.headers}
-        selectedColumnIndexes={workbook.selectedColumnIndexes}
-        moneyMappingState={workbook.parsedTable.moneyMappingState}
-        onToggleColumn={workbook.updateColumnSelection}
-        onResetColumns={workbook.resetColumnSelection}
-        onApplyMoneyMapping={handleApplyMoneyMapping}
-        onAutoDetectMoney={workbook.autoDetectMoneyMapping}
-        onClearMoneyMapping={workbook.clearMoneyMapping}
+    <div
+      className={'ep-root' + (isDragOver ? ' ep-drag-active' : '')}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Hidden file input — FSA intercepts click; fallback uses onChange */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={FILE_INPUT_ACCEPT}
+        className="ep-hidden-input"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={handleFileInputClick}
+        onChange={handleFileInputChange}
       />
 
-      <FloatingSettings
+      {isDragOver && (
+        <div className="ep-drag-overlay" aria-hidden="true">
+          Drop to open workbook
+        </div>
+      )}
+
+      {!hasWorkbook && (
+        <DropZone isBusy={workbook.isBusy} onPickFile={triggerFileInput} />
+      )}
+
+      {hasWorkbook && (
+        <div className="ep-workspace">
+          <Toolbar
+            fileName={workbook.fileName}
+            sheetNames={workbook.sheetNames}
+            currentSheetName={workbook.currentSheetName}
+            headerIndex={workbook.headerIndex}
+            reloadMode={workbook.reloadMode}
+            reloadInterval={workbook.reloadInterval}
+            isBusy={workbook.isBusy}
+            activeView={activeView}
+            onPickFile={triggerFileInput}
+            onSheetChange={workbook.selectSheet}
+            onApplyHeader={workbook.applyManualHeaderRow}
+            onReloadModeChange={workbook.setReloadMode}
+            onReloadIntervalChange={workbook.setReloadInterval}
+            onViewChange={setActiveView}
+          />
+
+          {isStatusRelevant && (
+            <StatusStrip message={statusMessage} tone={statusTone} />
+          )}
+
+          <div className="ep-view">
+            <RawTable
+              isVisible={activeView === 'preview'}
+              rows={workbook.rows}
+              headerIndex={workbook.headerIndex}
+              mergedCovered={workbook.mergedCovered}
+              mergeAnchors={workbook.mergeAnchors}
+              mergeSummary={workbook.mergeSummary}
+              onSelectHeaderRow={workbook.applyHeaderIndex}
+              showStatus={showStatus}
+            />
+            <DataTable
+              isVisible={activeView === 'parsed'}
+              parsedTable={workbook.parsedTable}
+              selectedColumnIndexes={workbook.selectedColumnIndexes}
+              headerIndex={workbook.headerIndex}
+              mergeSummary={workbook.mergeSummary}
+              showStatus={showStatus}
+            />
+            <ChangelogPanel isVisible={activeView === 'changelog'} />
+          </div>
+        </div>
+      )}
+
+      <FloatingFab
         hasWorkbook={hasWorkbook}
         isBusy={workbook.isBusy}
         reloadMode={workbook.reloadMode}
@@ -115,17 +164,26 @@ export default function ExcelPreviewerTool() {
         fileHandle={workbook.fileHandle}
         supportsFSA={workbook.supportsFSA}
         selectedColumnCount={workbook.selectedColumnIndexes.length}
-        maxVisibleColumns={MAX_VISIBLE_COLUMNS}
         onOpenChangelog={() => setActiveView('changelog')}
-        onOpenColumns={() => {
-          if (hasWorkbook && workbook.parsedTable.headers.length) {
-            setIsColumnsDialogOpen(true);
-          }
-        }}
+        onOpenColumns={handleOpenColumns}
         onReload={workbook.reselectAndReload}
       />
 
-      <ToastContainer toasts={toasts} />
-    </>
+      <ColumnManager
+        isOpen={isColumnsOpen}
+        onClose={() => setIsColumnsOpen(false)}
+        hasWorkbook={hasWorkbook}
+        headers={workbook.parsedTable.headers}
+        selectedColumnIndexes={workbook.selectedColumnIndexes}
+        moneyMappingState={workbook.parsedTable.moneyMappingState}
+        onToggleColumn={workbook.updateColumnSelection}
+        onResetColumns={workbook.resetColumnSelection}
+        onApplyMoneyMapping={workbook.applyMoneyMapping}
+        onAutoDetectMoney={workbook.autoDetectMoneyMapping}
+        onClearMoneyMapping={workbook.clearMoneyMapping}
+      />
+
+      <Toast toasts={toasts} />
+    </div>
   );
 }

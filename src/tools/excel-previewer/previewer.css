@@ -1,0 +1,698 @@
+/* ============================================================
+   EXCEL PREVIEWER — scoped styles (ep- prefix)
+   All color/radius/shadow values come from global design tokens.
+   ============================================================ */
+
+/* ── Root ──────────────────────────────────────────────────── */
+.ep-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+.ep-hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── Drag overlay ──────────────────────────────────────────── */
+.ep-drag-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg) 95%);
+  border: 2px dashed var(--accent);
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ── Drop zone (empty state) — compact ─────────────────────── */
+.ep-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 72px 24px;
+  text-align: center;
+}
+
+.ep-dropzone-pick {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--button-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 140ms;
+}
+
+.ep-dropzone-pick:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.ep-dropzone-pick:active:not(:disabled) {
+  opacity: 0.7;
+}
+
+.ep-dropzone-pick:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ep-dropzone-hint {
+  margin: 0;
+  font-size: 0.81rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Workspace ─────────────────────────────────────────────── */
+.ep-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+.ep-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.ep-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.ep-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--line-strong);
+  flex-shrink: 0;
+}
+
+.ep-toolbar-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+/* File pill */
+.ep-file-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: min(210px, 28vw);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: border-color 140ms;
+  flex-shrink: 0;
+}
+
+.ep-file-pill:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.ep-file-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Control label — normal weight, normal case */
+.ep-ctrl-label {
+  font-size: 0.79rem;
+  font-weight: 500;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Select controls */
+.ep-ctrl-select {
+  height: 30px;
+  min-height: unset;   /* cancel global select { min-height: 44px } */
+  width: auto;         /* cancel global select { width: 100% } */
+  padding: 0 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.83rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 140ms, box-shadow 140ms;
+}
+
+.ep-ctrl-select:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.ep-ctrl-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.ep-ctrl-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Header row control */
+.ep-header-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ep-header-input {
+  width: 44px;
+  height: 30px;
+  min-height: unset;   /* cancel global input[type="number"] { min-height: 44px } */
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.83rem;
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: center;
+  outline: none;
+  transition: border-color 140ms, box-shadow 140ms;
+}
+
+.ep-header-input:focus {
+  border-color: var(--accent);
+}
+
+.ep-header-input:disabled {
+  opacity: 0.45;
+}
+
+/* hide native number spinners */
+.ep-header-input::-webkit-outer-spin-button,
+.ep-header-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.ep-header-input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  width: 44px;   /* cancels global input[type="number"] { width: 100% } */
+}
+
+.ep-apply-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--button-text);
+  font: inherit;
+  font-size: 0.81rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 140ms;
+  white-space: nowrap;
+}
+
+.ep-apply-btn:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.ep-apply-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Reload toggle */
+.ep-reload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.81rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 140ms;
+}
+
+.ep-reload-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.ep-reload-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ep-reload-btn.ep-auto {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 32%, var(--line));
+  background: var(--success-soft);
+}
+
+/* View tabs */
+.ep-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.ep-tab {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: calc(var(--radius-sm) - 1px);
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.81rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms, color 120ms;
+}
+
+.ep-tab:hover {
+  color: var(--text);
+}
+
+.ep-tab.ep-tab-active {
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+}
+
+/* ── Status strip ──────────────────────────────────────────── */
+.ep-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  border: 1px solid var(--glass-border);
+  font-size: 0.83rem;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.ep-status.ep-err {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 24%, transparent);
+  background: var(--danger-soft);
+}
+
+.ep-status.ep-ok {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 24%, transparent);
+  background: var(--success-soft);
+}
+
+.ep-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+/* ── View area ─────────────────────────────────────────────── */
+.ep-view {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Data meta — sits directly above the table, no title above it */
+.ep-data-meta {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.4;
+}
+
+/* Table scroll shell */
+.ep-table-shell {
+  overflow: auto;
+  max-height: clamp(340px, calc(100vh - 240px), 920px);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.ep-table-shell::-webkit-scrollbar { width: 8px; height: 8px; }
+.ep-table-shell::-webkit-scrollbar-track { background: transparent; }
+.ep-table-shell::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Parsed table: full-width word-wrap */
+#ep-parsed-table {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+#ep-parsed-table th,
+#ep-parsed-table td {
+  min-width: 0;
+  max-width: none;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Sticky first column — raw table */
+#ep-raw-table tr > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--table-sticky);
+}
+
+#ep-raw-table thead tr > :first-child {
+  z-index: 4;
+  background: var(--table-head);
+}
+
+#ep-raw-table tbody tr:nth-child(even) > :first-child {
+  background: color-mix(in srgb, var(--stripe) 70%, var(--table-sticky));
+}
+
+#ep-raw-table tbody tr.is-selected > :first-child {
+  background: color-mix(in srgb, var(--accent) 12%, var(--table-sticky));
+}
+
+/* Sticky first column — parsed table */
+#ep-parsed-table tr > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--table-sticky);
+}
+
+#ep-parsed-table thead tr > :first-child {
+  z-index: 4;
+  background: var(--table-head);
+}
+
+#ep-parsed-table tbody tr:nth-child(even) > :first-child {
+  background: color-mix(in srgb, var(--stripe) 70%, var(--table-sticky));
+}
+
+/* Empty states within data panels */
+.ep-empty {
+  padding: clamp(20px, 4vw, 36px) 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  text-align: center;
+  color: var(--muted);
+}
+
+.ep-empty-title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ep-empty-sub {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  display: inline-block;
+  max-width: 380px;
+}
+
+/* ── Floating FAB ──────────────────────────────────────────── */
+.ep-fab-wrap {
+  position: fixed;
+  bottom: clamp(14px, 2vw, 20px);
+  right: clamp(14px, 2vw, 20px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ep-fab-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-elevated);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-soft);
+  transition: border-color 140ms, color 140ms, box-shadow 140ms;
+}
+
+.ep-fab-toggle:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+
+.ep-fab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(232px, calc(100vw - 32px));
+}
+
+.ep-fab-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-elevated);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms, background-color 140ms;
+}
+
+.ep-fab-item:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-strong);
+}
+
+.ep-fab-item:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.ep-fab-item.ep-fab-primary {
+  background: var(--accent);
+  color: var(--button-text);
+  border-color: transparent;
+}
+
+.ep-fab-item.ep-fab-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.ep-fab-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ep-fab-sub {
+  font-size: 0.72rem;
+  opacity: 0.6;
+  line-height: 1.2;
+}
+
+/* ── Changelog panel ───────────────────────────────────────── */
+.ep-changelog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ep-cl-title {
+  margin: 0;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.ep-cl-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ep-entry {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--surface-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ep-entry-hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ep-entry-ver {
+  margin: 0 0 1px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.71rem;
+  color: var(--muted);
+}
+
+.ep-entry-headline {
+  margin: 0 0 2px;
+  font-size: 0.93rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ep-entry-date {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ep-entry-stage {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.73rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ep-entry-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.ep-entry-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.ep-entry-section {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.ep-entry-sec-title {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ep-entry-points {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .ep-ctrl-label { display: none; }
+}
+
+@media (max-width: 640px) {
+  .ep-toolbar { gap: 5px; }
+  .ep-file-pill { max-width: min(150px, 40vw); }
+  .ep-tabs { order: 10; width: 100%; justify-content: stretch; }
+  .ep-tab { flex: 1; text-align: center; }
+  .ep-toolbar-spacer { display: none; }
+  .ep-data-meta { display: none; }
+  .ep-fab-wrap { right: 8px; bottom: 8px; }
+}
+
+@media (max-width: 400px) {
+  .ep-toolbar-divider { display: none; }
+}

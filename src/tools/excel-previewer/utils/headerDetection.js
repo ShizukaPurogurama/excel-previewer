@@ -1,3 +1,4 @@
+// Kept: scoring algorithm for auto-detecting the header row — pure logic, no UI.
 import { countNonEmpty, isNumericLike, isTextLike, normalizeCell } from './columns.js';
 
 export function detectHeaderRow(rows) {

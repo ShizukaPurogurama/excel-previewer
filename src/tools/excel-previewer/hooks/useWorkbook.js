@@ -1,3 +1,4 @@
+// Kept: all workbook state — file loading, sheet selection, header detection, column/money-mapping persistence, auto-reload timer.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   COLUMN_PRESETS,

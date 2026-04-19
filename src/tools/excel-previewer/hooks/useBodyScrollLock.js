@@ -1,3 +1,4 @@
+// Kept: body scroll lock for dialogs — fixes position and restores scroll offset on unlock.
 import { useEffect, useRef } from 'react';
 
 export function useBodyScrollLock(isLocked) {
