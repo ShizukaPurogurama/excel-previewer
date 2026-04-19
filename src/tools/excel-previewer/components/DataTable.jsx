@@ -1,5 +1,8 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCellCopy } from '../hooks/useCellCopy.js';
+import { useColumnFilters } from '../hooks/useColumnFilters.js';
+import { getHeaderSignature } from '../utils/columns.js';
+import ColumnFilterMenu from './ColumnFilterMenu.jsx';
 
 function buildMeta(records, columns, headerIndex, mergeSummary) {
   return (
@@ -16,6 +19,23 @@ function buildMeta(records, columns, headerIndex, mergeSummary) {
   );
 }
 
+function FilterIcon({ active, open }) {
+  const cls = ['ep-col-filter-icon', active && 'is-active', open && 'is-open']
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <svg
+      className={cls}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M2 3h12L9.5 8v4.4l-3 1.6V8L2 3z" />
+    </svg>
+  );
+}
+
 export default function DataTable({
   isVisible,
   parsedTable,
@@ -23,45 +43,107 @@ export default function DataTable({
   headerIndex,
   mergeSummary,
   showStatus,
+  sheetName,
 }) {
   const { handleTableClick } = useCellCopy({ showStatus });
   const copyContextRef = useRef(null);
+  const filterButtonRefs = useRef({});
+  const [openColumnKey, setOpenColumnKey] = useState(null);
 
   const { headers, records, mergedCarryRows, mergedAnchors } = parsedTable;
   const hasHeaders = headers.length > 0;
 
+  const tableColumns = useMemo(
+    () =>
+      selectedColumnIndexes.map((columnIndex) => ({
+        key: String(columnIndex),
+        index: columnIndex,
+        label: headers[columnIndex] || 'Column ' + (columnIndex + 1),
+      })),
+    [headers, selectedColumnIndexes]
+  );
+
+  const scopeKey = useMemo(
+    () =>
+      [sheetName || '', getHeaderSignature(headers), selectedColumnIndexes.join(',')].join(
+        '::'
+      ),
+    [headers, sheetName, selectedColumnIndexes]
+  );
+
+  useEffect(() => {
+    setOpenColumnKey(null);
+  }, [scopeKey]);
+
+  const setFilterButtonRef = useCallback(
+    (columnKey) => (element) => {
+      if (element) {
+        filterButtonRefs.current[columnKey] = element;
+        return;
+      }
+      delete filterButtonRefs.current[columnKey];
+    },
+    []
+  );
+
+  const {
+    columns: filteredColumns,
+    filteredRowIndexes,
+    activeFilterCount,
+    setColumnFilter,
+    clearColumnFilter,
+    clearAllFilters,
+  } = useColumnFilters({
+    rows: records,
+    columns: tableColumns,
+    scopeKey,
+  });
+
   const tableData = useMemo(() => {
     if (!hasHeaders) return { selectedHeaders: [], selectedRows: [] };
 
-    const selectedHeaders = selectedColumnIndexes.map((idx) => headers[idx]);
+    const selectedHeaders = filteredColumns.map((column) => column.label);
 
-    const selectedRows = records.map((record, rowIndex) => {
+    const selectedRows = filteredRowIndexes.map((rowIndex) => {
+      const record = records[rowIndex] || [];
       const flags = mergedCarryRows[rowIndex] || [];
       const anchors = mergedAnchors[rowIndex] || [];
       const cells = [];
 
-      for (const colIdx of selectedColumnIndexes) {
+      for (const column of tableColumns) {
+        const colIdx = column.index;
         const isCarry = Boolean(flags[colIdx]);
         const anchor = anchors[colIdx] || null;
         if (isCarry && !anchor) continue;
         cells.push({ colIdx, value: record[colIdx], anchor });
       }
 
-      return cells;
+      return {
+        rowIndex,
+        cells,
+        record: selectedColumnIndexes.map((idx) => record[idx]),
+      };
     });
 
     return { selectedHeaders, selectedRows };
-  }, [hasHeaders, headers, records, mergedCarryRows, mergedAnchors, selectedColumnIndexes]);
+  }, [
+    filteredColumns,
+    filteredRowIndexes,
+    hasHeaders,
+    mergedAnchors,
+    mergedCarryRows,
+    records,
+    selectedColumnIndexes,
+    tableColumns,
+  ]);
 
   copyContextRef.current = useMemo(() => {
     if (!tableData.selectedHeaders.length) return null;
     return {
       headers: tableData.selectedHeaders.slice(),
-      records: records.map((row) =>
-        selectedColumnIndexes.map((idx) => row[idx])
-      ),
+      records: tableData.selectedRows.map((row) => row.record.slice()),
     };
-  }, [tableData.selectedHeaders, records, selectedColumnIndexes]);
+  }, [tableData.selectedHeaders, tableData.selectedRows]);
 
   if (!isVisible) return null;
 
@@ -77,16 +159,35 @@ export default function DataTable({
     );
   }
 
-  const metaText = buildMeta(
-    records.length,
-    headers.length,
-    headerIndex,
-    mergeSummary
-  );
+  const metaText = buildMeta(records.length, headers.length, headerIndex, mergeSummary);
+  const filteredMetaText =
+    activeFilterCount > 0
+      ? ' · Showing ' + filteredRowIndexes.length + ' of ' + records.length + ' rows'
+      : '';
+
+  const handleToggleColumnMenu = (columnKey) => {
+    setOpenColumnKey((current) => (current === columnKey ? null : columnKey));
+  };
+
+  const handleClearAllFilters = () => {
+    clearAllFilters();
+    setOpenColumnKey(null);
+  };
 
   return (
     <div>
-      <p className="ep-data-meta">{metaText}</p>
+      <div className="ep-data-meta-row">
+        <p className="ep-data-meta">{metaText + filteredMetaText}</p>
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            className="ep-clear-filters-btn"
+            onClick={handleClearAllFilters}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
       <div
         className="ep-table-shell"
         onClick={(e) => handleTableClick(e, copyContextRef.current)}
@@ -96,22 +197,74 @@ export default function DataTable({
         <table id="ep-parsed-table">
           <thead>
             <tr>
-              {tableData.selectedHeaders.map((label, i) => (
-                <th key={selectedColumnIndexes[i]} scope="col">
-                  {label}
-                </th>
-              ))}
+              {filteredColumns.map((column) => {
+                const isOpen = openColumnKey === column.key;
+                const triggerRef = setFilterButtonRef(column.key);
+
+                return (
+                  <th
+                    key={column.key}
+                    scope="col"
+                    className={
+                      'ep-col-th' +
+                      (isOpen ? ' ep-col-th-open' : '') +
+                      (column.isActive ? ' ep-col-th-active' : '')
+                    }
+                  >
+                    <div className="ep-col-head">
+                      <span className="ep-col-label" title={column.label}>
+                        {column.label}
+                      </span>
+                      <button
+                        ref={triggerRef}
+                        type="button"
+                        className={
+                          'ep-col-filter-trigger' +
+                          (column.isActive ? ' is-active' : '') +
+                          (isOpen ? ' is-open' : '')
+                        }
+                        data-ep-column-filter-trigger
+                        aria-label={`Filter ${column.label}`}
+                        aria-expanded={isOpen ? 'true' : 'false'}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleToggleColumnMenu(column.key);
+                        }}
+                      >
+                        <FilterIcon active={column.isActive} open={isOpen} />
+                        <span className="ep-col-filter-caret" aria-hidden="true">
+                          ▾
+                        </span>
+                      </button>
+                    </div>
+
+                    {isOpen && (
+                      <ColumnFilterMenu
+                        anchorElement={filterButtonRefs.current[column.key] || null}
+                        columnLabel={column.label}
+                        state={column.state}
+                        options={column.options}
+                        onChange={(patch) => setColumnFilter(column.key, patch)}
+                        onClear={() => clearColumnFilter(column.key)}
+                        onClose={() => setOpenColumnKey(null)}
+                      />
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {tableData.selectedRows.length === 0 ? (
               <tr>
                 <td colSpan={Math.max(tableData.selectedHeaders.length, 1)}>
-                  Header row found, but no non-empty data rows follow it.
+                  {activeFilterCount > 0
+                    ? 'No rows match the active filters.'
+                    : 'Header row found, but no non-empty data rows follow it.'}
                 </td>
               </tr>
             ) : (
-              tableData.selectedRows.map((cells, rowIndex) => (
+              tableData.selectedRows.map(({ rowIndex, cells }) => (
                 <tr key={rowIndex}>
                   {cells.map((cell) => {
                     const cls = [
@@ -122,8 +275,7 @@ export default function DataTable({
                       .join(' ');
 
                     const tdProps = { className: cls || undefined };
-                    if (cell.anchor?.rowSpan > 1)
-                      tdProps.rowSpan = cell.anchor.rowSpan;
+                    if (cell.anchor?.rowSpan > 1) tdProps.rowSpan = cell.anchor.rowSpan;
 
                     return (
                       <td key={cell.colIdx} {...tdProps}>
