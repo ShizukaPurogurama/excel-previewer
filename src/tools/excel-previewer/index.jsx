@@ -149,6 +149,7 @@ export default function ExcelPreviewerTool() {
               selectedColumnIndexes={workbook.selectedColumnIndexes}
               headerIndex={workbook.headerIndex}
               mergeSummary={workbook.mergeSummary}
+              sheetName={workbook.currentSheetName}
               showStatus={showStatus}
             />
             <ChangelogPanel isVisible={activeView === 'changelog'} />

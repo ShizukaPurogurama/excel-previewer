@@ -69,10 +69,10 @@ export function useCellCopy({ showStatus }) {
     (event, copyContext) => {
       if (event.target.closest('button')) return;
       if (event.target.closest('a')) return;
+      if (event.target.closest('[data-ep-column-filter]')) return;
 
       const cell = event.target.closest('td, th');
       if (!cell) return;
-      if (cell.querySelector('button')) return;
 
       if (cell.tagName === 'TH' && cell.closest('thead')) {
         const ths = Array.from(cell.parentElement.children);
