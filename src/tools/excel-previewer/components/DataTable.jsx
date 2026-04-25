@@ -257,7 +257,10 @@ export default function DataTable({
           <tbody>
             {tableData.selectedRows.length === 0 ? (
               <tr>
-                <td colSpan={Math.max(tableData.selectedHeaders.length, 1)}>
+                <td
+                  className="ep-no-rows-cell"
+                  colSpan={Math.max(tableData.selectedHeaders.length, 1)}
+                >
                   {activeFilterCount > 0
                     ? 'No rows match the active filters.'
                     : 'Header row found, but no non-empty data rows follow it.'}

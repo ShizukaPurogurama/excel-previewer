@@ -414,22 +414,12 @@
   outline-offset: 2px;
 }
 
-/* Table scroll shell */
+/* Table scroll shell — scrolls with the page, no inner scrollbar */
 .ep-table-shell {
-  overflow: auto;
-  max-height: clamp(340px, calc(100vh - 240px), 920px);
+  overflow: visible;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--surface-soft);
-}
-
-.ep-table-shell::-webkit-scrollbar { width: 8px; height: 8px; }
-.ep-table-shell::-webkit-scrollbar-track { background: transparent; }
-.ep-table-shell::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
 }
 
 /* Parsed table: full-width word-wrap */
@@ -453,7 +443,7 @@
 }
 
 .ep-col-th-open {
-  z-index: 12;
+  z-index: 40;
 }
 
 .ep-col-head {
@@ -538,7 +528,7 @@
 .ep-col-filter-menu {
   position: absolute;
   top: calc(100% + 8px);
-  z-index: 20;
+  z-index: 80;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -828,6 +818,18 @@
 
 #ep-parsed-table tbody tr:nth-child(even) > :first-child {
   background: color-mix(in srgb, var(--stripe) 70%, var(--table-sticky));
+}
+
+/* Do not make the no-results colSpan cell sticky; it can cover filter popovers. */
+#ep-parsed-table tbody td.ep-no-rows-cell {
+  position: relative;
+  left: auto;
+  z-index: 1;
+  cursor: default;
+}
+
+#ep-parsed-table tbody td.ep-no-rows-cell::after {
+  display: none;
 }
 
 /* Empty states within data panels */
